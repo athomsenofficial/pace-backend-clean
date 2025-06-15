@@ -203,7 +203,7 @@ class MilitaryRosterDocument(BaseDocTemplate):
         cui_center_x = (self.page_width / 2) - (cui_width / 2)
         canvas.drawString(cui_center_x, bottom_y, cui_text)
 
-        identifier_text = f"{str(self.melYear)[-2:]}{promotion_map[self.cycle]} - Initial MEL"
+        identifier_text = f"{str(self.melYear + 1)[-2:]}{promotion_map[self.cycle]} - Initial MEL"
         identifier_width = stringWidth(identifier_text, 'Calibri-Bold', 12)
         identifier_center_x = (self.page_width / 2) - (identifier_width / 2)
         canvas.drawString(identifier_center_x, bottom_y - 18, identifier_text)

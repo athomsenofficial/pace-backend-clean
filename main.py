@@ -71,6 +71,9 @@ async def upload_file(
 
     if session['pascodes'] is not None:
         return_object['pascodes'] = session['pascodes']
+    
+    if session['pascode_unit_map'] is not None:
+        return_object['pascode_unit_map'] = session['pascode_unit_map']
 
     if session['small_unit_df'] is not None:
         return_object['senior_rater_needed'] = True

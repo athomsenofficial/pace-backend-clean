@@ -135,6 +135,9 @@ def roster_processor(roster_df, session_id, cycle, year):
 
     if small_unit_df is not None:
         update_session(session_id, small_unit_df=small_unit_df)
+    
+    if pascodeUnitMap is not None:
+        update_session(session_id, pascode_unit_map=pascodeUnitMap)
 
     if error_log.count != 0:
         update_session(session_id, error_log=error_log)
