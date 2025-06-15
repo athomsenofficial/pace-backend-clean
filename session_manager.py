@@ -17,13 +17,23 @@ SESSION_TTL_SECONDS = 1800
 
 def create_session(processed_df: pd.DataFrame, pdf_df: pd.DataFrame):
     session_id = str(uuid.uuid4())
+
+    def sanitize_records(records):
+        for record in records:
+            for key, value in record.items():
+                if pd.isna(value):
+                    record[key] = None
+                elif isinstance(value, pd.Timestamp):
+                    record[key] = value.isoformat()
+        return records
+
     session_data = {
-        "dataframe": processed_df.to_dict(orient="records"),
-        "pdf_dataframe": pdf_df.to_dict(orient="records"),
+        "dataframe": sanitize_records(processed_df.to_dict(orient="records")),
+        "pdf_dataframe": sanitize_records(pdf_df.to_dict(orient="records")),
     }
+
     r.set(session_id, json.dumps(session_data), ex=SESSION_TTL_SECONDS)
     return session_id
-
 
 def get_session(session_id):
     raw = r.get(session_id)
