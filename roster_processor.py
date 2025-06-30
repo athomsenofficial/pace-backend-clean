@@ -143,7 +143,3 @@ def roster_processor(roster_df, session_id, cycle, year):
         update_session(session_id, error_log=error_log)
 
     return
-
-    # generate_roster_pdf(session_id, eligible_df, ineligible_df, btz_df, small_unit_df, sridPascodeMap, cycle, year, pascodeMap,
-    #                     output_filename=rf"tmp/{session_id}_initial_mel_roster.pdf",
-    #                     logo_path='images/afpc.png')

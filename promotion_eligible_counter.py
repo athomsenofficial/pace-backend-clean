@@ -197,5 +197,3 @@ def get_promotion_eligibility(total_eligible, rank='SrA'):
 
 
 mp,pn = get_promotion_eligibility(24, 'SSG')
-print(f'must promote: {mp}')
-print(f'promote now: {pn}')
