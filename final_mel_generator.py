@@ -19,8 +19,14 @@ import pandas as pd
 from session_manager import get_session
 
 # Register Calibri fonts
-pdfmetrics.registerFont(TTFont('Calibri', 'Calibri.ttf'))
-pdfmetrics.registerFont(TTFont('Calibri-Bold', 'Calibrib.ttf'))
+base_dir = os.path.dirname(os.path.abspath(__file__))
+calibri_path = os.path.join(base_dir, 'fonts', 'calibri.ttf')
+calibrib_path = os.path.join(base_dir, 'fonts', 'calibrib.ttf')
+
+# Register Calibri fonts
+pdfmetrics.registerFont(TTFont('Calibri', calibri_path))
+pdfmetrics.registerFont(TTFont('Calibri-Bold', calibrib_path))
+
 
 promotion_map = {
     "SRA": "E5",
