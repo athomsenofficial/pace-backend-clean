@@ -597,8 +597,13 @@ def generate_roster_pdf(session_id, output_filename, logo_path='/images/afpc.png
             continue
 
         # Create PAS info for this pascode
-        eligible_candidates = (eligible_df['ASSIGNED_PAS'] == pascode).sum()
-        print(f"Creating PDF for pascode {pascode}: {eligible_candidates} eligible candidates")
+        try:
+            if 'ASSIGNED_PAS' in eligible_df.columns:
+                eligible_candidates = (eligible_df['ASSIGNED_PAS'] == pascode).sum()
+            else:
+                eligible_candidates = len(pascode_eligible)
+        except:
+            eligible_candidates = len(pascode_eligible)
         must_promote, promote_now = get_promotion_eligibility(eligible_candidates, cycle)
 
         pas_info = {
@@ -658,12 +663,5 @@ def generate_roster_pdf(session_id, output_filename, logo_path='/images/afpc.png
     if temp_pdfs:
         response = merge_pdfs(temp_pdfs, session_id)
         return response
-
-        # Clean up temporary files
-        for pdf in temp_pdfs:
-            try:
-                os.remove(pdf)
-            except Exception as e:
-                print(f"Warning: Could not remove temporary file {pdf}: {e}")
     else:
         print("No PDFs were generated. Check your data and pascode_map.")

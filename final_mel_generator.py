@@ -438,7 +438,7 @@ def add_interactive_checkboxes(pdf_path, eligible_data, pascode):
 
         return pdf_path
 
-def generate_final_mel_pdf(eligible_data, ineligible_data, cycle, melYear, pascode, pas_info,
+def generate_final_mel_pdf(eligible_data, ineligible_data, small_unit_data, senior_rater, senior_raters, is_last, cycle, melYear, pascode, pas_info,
                            output_filename, logo_path):
     """Generate a PDF for a single pascode for final MEL with interactive form fields"""
     # Standard columns we know about
@@ -449,6 +449,17 @@ def generate_final_mel_pdf(eligible_data, ineligible_data, cycle, melYear, pasco
     pascode_idx = 7  # ASSIGNED_PAS/PASCODE
 
     doc = FinalMELDocument(
+        output_filename,
+        cycle=cycle,
+        melYear=melYear,
+        pagesize=landscape(letter),
+        rightMargin=0.5 * inch,
+        leftMargin=0.5 * inch,
+        topMargin=0.5 * inch,
+        bottomMargin=0.5 * inch
+    )
+
+    doc2 = FinalMELDocument(
         output_filename,
         cycle=cycle,
         melYear=melYear,
@@ -553,9 +564,52 @@ def generate_final_mel_pdf(eligible_data, ineligible_data, cycle, melYear, pasco
     # Build the PDF with ReportLab
     doc.build(elements)
 
+    if is_last and len(small_unit_data) > 0 and not eligible_data and not ineligible_data:
+        srid_df = small_unit_data
+        srid_list = srid_df.values.tolist()
+        senior_rater_srid = senior_rater['srid']
+        senior_rater_name = senior_rater['senior_rater_name']
+        senior_rater_rank = senior_rater['senior_rater_rank']
+        senior_rater_title = senior_rater['senior_rater_title']
+        must_promote, promote_now = get_promotion_eligibility(len(small_unit_data), cycle)
+
+        doc2.pas_info = {
+            'srid': senior_rater['srid'],
+            'fd name': senior_rater_name,
+            'rank': senior_rater_rank,
+            'title': senior_rater_title,
+            'fdid': pas_info['fdid'],
+            'srid mpf': pas_info['srid mpf'],
+            'mp': must_promote,
+            'pn': promote_now,  # Add small unit flag
+            "is_small_unit": is_last
+        }
+
+
+        doc2.logo_path = logo_path
+
+        elements = []
+
+        table = create_final_mel_table(
+            doc2,
+            data=srid_list,
+            header=eligible_header_row,
+            table_type="SENIOR RATER",
+            count=len(srid_list)
+        )
+        elements.append(table)
+        if senior_rater_srid != list(senior_raters.keys())[-1]:
+            elements.append(PageBreak())
+
+        doc2.build(elements)
+
     # Add interactive checkboxes with PyMuPDF if we have eligible data
     if processed_eligible_data:
         add_interactive_checkboxes(output_filename, processed_eligible_data, pascode)
+
+        # Add checkboxes to senior rater page
+    if is_last and len(small_unit_data) > 0 and not eligible_data and not ineligible_data:
+        add_interactive_checkboxes(output_filename, srid_list, pascode + "_SR")
 
     return output_filename
 
@@ -601,7 +655,6 @@ def generate_final_roster_pdf(session_id,
     session = get_session(session_id)
     eligible_df = pd.DataFrame.from_records(session['eligible_df'])
     ineligible_df = pd.DataFrame.from_records(session['ineligible_df'])
-    btz_df = pd.DataFrame.from_records(session['btz_df']) 
     small_unit_df = pd.DataFrame(session['small_unit_df'])
     senior_raters = session['srid_pascode_map']
     cycle = session['cycle']
@@ -650,6 +703,7 @@ def generate_final_roster_pdf(session_id,
         # Determine if this is a small unit (10 or fewer eligible members)
         is_small_unit = eligible_candidates <= 10
 
+
         must_promote, promote_now = get_promotion_eligibility(eligible_candidates, cycle)
         pas_info = {
             'srid': pascode_map[pascode]['srid'],
@@ -665,11 +719,16 @@ def generate_final_roster_pdf(session_id,
 
         # Create temporary filename
         temp_filename = f"temp_final_{pascode}.pdf"
-
+        is_last = (pascode == unique_pascodes[-1])
+        
         # Generate PDF for this pascode with interactive form fields
         temp_pdf = generate_final_mel_pdf(
             pascode_eligible,
             pascode_ineligible,
+            small_unit_df,
+            senior_rater,
+            senior_raters,
+            is_last,
             cycle,
             melYear,
             pascode,
@@ -679,6 +738,26 @@ def generate_final_roster_pdf(session_id,
         )
 
         temp_pdfs.append(temp_pdf)
+
+        if is_last:
+            print(f"Creating PDF for small unit : {len(small_unit_df)} eligible candidates")
+            sr_temp_pdf = generate_final_mel_pdf(
+                [],  # no eligible
+                [],  # no ineligible
+                small_unit_df,
+                senior_rater,
+                senior_raters,
+                is_last,
+                cycle,
+                melYear,
+                pascode,
+                pas_info,
+                f"temp_small_unit.pdf",
+                logo_path
+            )
+            temp_pdfs.append(sr_temp_pdf)
+
+
 
     # Merge all the temporary PDFs into the final output file
     if temp_pdfs:

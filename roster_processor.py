@@ -53,7 +53,7 @@ def roster_processor(roster_df, session_id, cycle, year):
         valid_member = accounting_date_check(row['DATE_ARRIVED_STATION'], cycle, year)
         if not valid_member:
             continue
-        if row['ASSIGNED_PAS'] not in pascodes:
+        if row['ASSIGNED_PAS'] not in pascodes: 
             pascodes.append(row['ASSIGNED_PAS'])
             pascodeUnitMap[row['ASSIGNED_PAS']] = row['ASSIGNED_PAS_CLEARTEXT']
         if row['GRADE_PERM_PROJ'] == cycle:
