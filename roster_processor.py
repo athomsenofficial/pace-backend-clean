@@ -83,6 +83,8 @@ def roster_processor(roster_df, session_id, cycle, year):
     pascodes = sorted(pascodes)
 
     update_session(session_id, pascodes=pascodes)
+    update_session(session_id, reason_for_ineligible_map=reason_for_ineligible_map)
+    print(reason_for_ineligible_map)
 
     eligible_df = pdf_roster.loc[eligible_service_members]
     for column in eligible_df.columns:
