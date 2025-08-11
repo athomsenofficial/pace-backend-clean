@@ -214,7 +214,7 @@ def board_filter(grade, year, date_of_rank, uif_code, uif_disposition_date, tafm
         if grade == 'A1C' or grade == 'AMN' or grade == 'AB':
             if three_year_tafmsd_check(scod_as_datetime, tafmsd):
                 return False, 'Over 36 months TIS.'
-        if date_of_rank > tig_eligibility_month:
+        if date_of_rank <= tig_eligibility_month:
             return False, f'TIG: < {tig_months_required.get(grade)} months'
         if tafmsd > tafmsd_required_date:
             return False, f'TIS < {TAFMSD.get(grade)} years'
