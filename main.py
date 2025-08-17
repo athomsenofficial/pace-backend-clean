@@ -15,7 +15,6 @@ from classes import PasCodeInfo, PasCodeSubmission
 app = FastAPI()
 
 origins = [
-    "http://localhost:5173",
     "https://hammerhead-app-bqr7z.ondigitalocean.app",
     "https://api.pace-af-tool.com",
     "https://pace-af-tool.com",
