@@ -142,75 +142,29 @@ def _parse_date(value):
 
 
 def pafsc_check(grade, pafsc, two_afsc, three_afsc, four_afsc):
-    if pafsc is not None and len(pafsc) >= 5:
-        if pafsc[0] == '8' or pafsc[0] == '9':
-            return None
-        if isinstance(pafsc, str) and pafsc[0].isalpha():
-            if pafsc[4] >= pafsc_map.get(grade):
-                return True
-            elif isinstance(two_afsc, str) and two_afsc is not None:
-                if len(two_afsc) >= 6 and two_afsc[0].isalpha() or two_afsc[0] == '-':
-                    if two_afsc[4] >= pafsc_map.get(grade):
-                        return True
-                elif len(two_afsc) == 6 and not two_afsc[0].isalpha() or not two_afsc[0] == '-':
-                    if two_afsc[3] >= pafsc_map.get(grade):
-                        return True
-                elif len(two_afsc) == 5:
-                    if two_afsc[3] >= pafsc_map.get(grade):
-                        return True
-            elif isinstance(three_afsc, str) and three_afsc is not None:
-                if len(three_afsc) >= 6 and three_afsc[0].isalpha() or three_afsc[0] == '-':
-                    if three_afsc[4] >= pafsc_map.get(grade):
-                        return True
-                elif len(three_afsc) == 6 and not three_afsc[0].isalpha() or not three_afsc[0] == '-':
-                    if three_afsc[3] >= pafsc_map.get(grade):
-                        return True
-                elif len(three_afsc) == 5:
-                    if three_afsc[3] >= pafsc_map.get(grade):
-                        return True
-            elif isinstance(four_afsc, str) and four_afsc is not None:
-                if len(four_afsc) >= 6 and four_afsc[0].isalpha() or four_afsc[0] == '-':
-                    if four_afsc[4] >= pafsc_map.get(grade):
-                        return True
-                elif len(four_afsc) == 6 and not four_afsc[0].isalpha() or not four_afsc[0] == '-':
-                    if four_afsc[3] >= pafsc_map.get(grade):
-                        return True
-                elif len(four_afsc) == 5:
-                    if four_afsc[3] >= pafsc_map.get(grade):
-                        return True
-        elif isinstance(pafsc, str) and not pafsc[0].isalpha():
-            if pafsc[3] >= pafsc_map.get(grade):
-                return True
-            elif isinstance(two_afsc, str) and two_afsc is not None:
-                if len(two_afsc) >= 6 and two_afsc[0].isalpha() or two_afsc[0] == '-':
-                    if two_afsc[4] >= pafsc_map.get(grade):
-                        return True
-                elif len(two_afsc) == 6 and not two_afsc[0].isalpha() or not two_afsc[0] == '-':
-                    if two_afsc[3] >= pafsc_map.get(grade):
-                        return True
-                elif len(two_afsc) == 5:
-                    if two_afsc[3] >= pafsc_map.get(grade):
-                        return True
-            elif isinstance(three_afsc, str) and three_afsc is not None:
-                if len(three_afsc) >= 6 and three_afsc[0].isalpha() or three_afsc[0] == '-':
-                    if three_afsc[4] >= pafsc_map.get(grade):
-                        return True
-                elif len(three_afsc) == 6 and not three_afsc[0].isalpha() or not three_afsc[0] == '-':
-                    if three_afsc[3] >= pafsc_map.get(grade):
-                        return True
-                elif len(three_afsc) == 5:
-                    if three_afsc[3] >= pafsc_map.get(grade):
-                        return True
-            elif isinstance(four_afsc, str) and four_afsc is not None:
-                if len(four_afsc) >= 6 and four_afsc[0].isalpha() or four_afsc[0] == '-':
-                    if four_afsc[4] >= pafsc_map.get(grade):
-                        return True
-                elif len(four_afsc) == 6 and not four_afsc[0].isalpha() or not four_afsc[0] == '-':
-                    if four_afsc[3] >= pafsc_map.get(grade):
-                        return True
-                elif len(four_afsc) == 5:
-                    if four_afsc[3] >= pafsc_map.get(grade):
-                        return True
+    if pafsc and pafsc[0] in ('8', '9'):
+        return None
+
+    required_level = pafsc_map.get(grade)
+    if not required_level:
+        return False
+
+    afscs = [pafsc, two_afsc, three_afsc, four_afsc]
+
+    for afsc in afscs:
+        if isinstance(afsc, str) and len(afsc) >= 5:
+            # Determine the index for the skill level character
+            # Index 4 for AFSCs with a letter or '-' at the beginning
+            # Index 3 for AFSCs with a number at the beginning
+            skill_level_index = 4 if afsc[0].isalpha() or afsc[0] == '-' else 3
+
+            try:
+                if afsc[skill_level_index] >= required_level:
+                    return True
+            except IndexError:
+                # Handle cases where the string might be too short for the determined index
+                continue
+
     return False
 
 
