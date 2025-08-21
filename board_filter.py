@@ -34,7 +34,7 @@ tig_months_required = {
     'A1C': 10,   # 23/6 months per chart (Note: Regular is 28 months, BTZ is different)
     'SRA': 6,    # 24/6 months per chart
     'SSG': 23,   # 23/23 months per chart
-    'TSG': 23,   # 24/23 months per chart (varies by cycle, using most common)
+    'TSG': 24,   # 24/23 months per chart (varies by cycle, using most common)
     'MSG': 20,   # 20/20 months per chart
     'SMS': 21    # 21/21 months per chart
 }
