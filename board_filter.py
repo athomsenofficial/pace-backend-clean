@@ -1,237 +1,147 @@
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+import pandas as pd
+from date_parsing import parse_date
+from constants import (
+    SCODS, TIG, TIG_MONTHS_REQUIRED, TAFMSD, MDOS,
+    MAIN_HIGHER_TENURE, EXCEPTION_HIGHER_TENURE, PAFSC_MAP,
+    RE_CODES, hyt_start_date, hyt_end_date
+)
 
-#Static closeout date = annual report due date
-SCODs = {
-    'AB': f'31-MAR',
-    'AMN': f'31-MAR',
-    'A1C': f'31-MAR',
-    'SRA': f'31-MAR',
-    'SSG': f'31-JAN',
-    'TSG': f'30-NOV',
-    'MSG': f'30-SEP',
-    'SMS': f'31-JUL'
-}
 
-#Time in grade = how long you've been in a rank
-TIG = {
-    'AB': f'01-AUG',
-    'AMN': f'01-AUG',
-    'A1C': f'01-AUG',
-    'SRA': f'01-AUG',
-    'SSG': f'01-JUL',
-    'TSG': f'01-MAY',
-    'MSG': f'01-MAR',
-    'SMS': f'01-DEC'
-}
+def pafsc_check(grade, pafsc, two_afsc, three_afsc, four_afsc):
+    if pafsc and pafsc[0] in ('8', '9'):
+        return None
 
-tig_months_required = {
-    'AB': 6,
-    'AMN': 6,
-    'A1C': 6,
-    'SRA': 6,
-    'SSG': 23,
-    'TSG': 24,
-    'MSG': 20,
-    'SMS': 21
-}
+    required_level = PAFSC_MAP.get(grade)
+    if not required_level:
+        return False
 
-#Total active federal military service date = time in military (years)
-TAFMSD = {
-    'AB': 3,
-    'AMN': 3,
-    'A1C': 3,
-    'SRA': 3,
-    'SSG': 5,
-    'TSG': 8,
-    'MSG': 11,
-    'SMS': 14
-}
+    afscs = [pafsc, two_afsc, three_afsc, four_afsc]
 
-#manditory date of separation = the day you have to exit the military
-mdos = {
-    'AB': f'01-SEP',
-    'AMN': f'01-SEP',
-    'A1C': f'01-SEP',
-    'SRA': f'01-SEP',
-    'SSG': f'01-AUG',
-    'TSG': f'01-AUG',
-    'MSG': f'01-APR',
-    'SMS': f'01-JAN'
-}
+    for afsc in afscs:
+        if isinstance(afsc, str) and len(afsc) >= 5:
+            skill_level_index = 4 if afsc[0].isalpha() or afsc[0] == '-' else 3
 
-main_higher_tenure = {
-    'AB': 6,
-    'AMN': 6,
-    'A1C': 8,
-    'SRA': 10,
-    'SSG': 20,
-    'TSG': 22,
-    'MSG': 24,
-    'SMS': 26
-}
-
-exception_higher_tenure = {
-    'AB': 8,
-    'AMN': 8,
-    'A1C': 10,
-    'SRA': 12,
-    'SSG': 22,
-    'TSG': 24,
-    'MSG': 26,
-    'SMS': 28
-}
-
-cafsc_map = {
-    'AB': '3',
-    'AMN': '3',
-    'A1C': '3',
-    'SRA': '5',
-    'SSG': '5',
-    'TSG': '7',
-    'MSG': '7',
-    'SMS': '9'
-}
-
-#reenlistment codes
-re_codes = {
-    "2A": "AFPC Denied Reenlistment",
-    "2B": "Discharged, General.",
-    "2C": "Involuntary separation.",
-    "2F": "Undergoing Rehab",
-    "2G": "Substance Abuse, Drugs",
-    "2H": "Substance Abuse, Alcohol",
-    "2J": "Under investigation",
-    "2K": "Involuntary Separation.",
-    "2M": "Sentenced under UCMJ",
-    "2P": "AWOL; deserter.",
-    "2W": "Retired and recalled to AD",
-    "2X": "Not selected for Reenlistment.",
-    "4H": "Article 15.",
-    "4I": "Control Roster.",
-    "4J": "AF Weight Management Program.",
-    "4K": "Medically disqualified",
-    "4L": "Separated, Commissioning program.",
-    "4M": "Breach of enlistment.",
-    "4N": "Convicted, Civil Court."
-}
-
-exception_hyt_start_date = datetime(2023, 12, 8)
-exception_hyt_end_date = datetime(2026, 9,30)
-
-def cafsc_check(grade, cafsc, two_afsc, three_afsc, four_afsc):
-    if cafsc is not None and len(cafsc) >= 6:
-        if cafsc[1] == '8' or cafsc[1] == '9':
-            return None
-        if cafsc[4] >= cafsc_map.get(grade):
-            return True
-        elif isinstance(two_afsc, str) and two_afsc is not None:
-            if len(two_afsc) == 6:
-                if two_afsc[4] >= cafsc_map.get(grade):
+            try:
+                if afsc[skill_level_index] >= required_level:
                     return True
-            elif len(two_afsc) == 5:
-                if two_afsc[3] >= cafsc_map.get(grade):
-                    return True
-        elif isinstance(three_afsc, str) and three_afsc is not None:
-            if len(three_afsc) == 6:
-                if three_afsc[4] >= cafsc_map.get(grade):
-                    return True
-            elif len(three_afsc) == 5:
-                if three_afsc[3] >= cafsc_map.get(grade):
-                    return True
-        elif isinstance(four_afsc, str) and four_afsc is not None:
-            if len(four_afsc) == 6:
-                if four_afsc[4] >= cafsc_map.get(grade):
-                    return True
-            elif len(four_afsc) == 5:
-                if four_afsc[3] >= cafsc_map.get(grade):
-                    return True
+            except IndexError:
+                continue
 
     return False
 
 
-
 def btz_elgibility_check(date_of_rank, year):
-    cutoff_date = datetime.strptime(f'01-Feb-{year}', '%d-%b-%Y' )
-    if isinstance(date_of_rank, str):
-        btz_date_of_rank = datetime.strptime(date_of_rank, '%d-%b-%Y') + relativedelta(months=22)
-    else:
-        btz_date_of_rank = date_of_rank + relativedelta(months=22)
-    scod_date = datetime.strptime(f'{SCODs.get('SRA')}-{year}', '%d-%b-%Y')
+    date_of_rank = parse_date(date_of_rank)
+    if not date_of_rank:
+        return False
+    cutoff_date = datetime.strptime(f"01-Feb-{year}", "%d-%b-%Y")
+    btz_date_of_rank = date_of_rank + relativedelta(months=22)
+    scod_date = datetime.strptime(f"{SCODS.get('SRA')}-{year}", "%d-%b-%Y")
     if btz_date_of_rank <= cutoff_date:
         return True
     if cutoff_date < btz_date_of_rank <= scod_date:
         return True
     return False
 
+
 def check_a1c_eligbility(date_of_rank, year):
-    cutoff_date = datetime.strptime(f'01-Feb-{year}', '%d-%b-%Y')
-    scod_date = datetime.strptime(f'{SCODs.get('SRA')}-{year}', '%d-%b-%Y')
-    if isinstance(date_of_rank, str):
-        standard_a1c_date_of_rank = datetime.strptime(date_of_rank, '%d-%b-%Y') + relativedelta(months=28)
-    else:
-        standard_a1c_date_of_rank = date_of_rank + relativedelta(months=28)
+    date_of_rank = parse_date(date_of_rank)
+    if not date_of_rank:
+        return False
+    cutoff_date = datetime.strptime(f"01-Feb-{year}", "%d-%b-%Y")
+    scod_date = datetime.strptime(f"{SCODS.get('SRA')}-{year}", "%d-%b-%Y")
+    standard_a1c_date_of_rank = date_of_rank + relativedelta(months=28)
     if standard_a1c_date_of_rank <= cutoff_date:
         return True
     if cutoff_date < standard_a1c_date_of_rank <= scod_date:
         return False
     return None
 
+
 def three_year_tafmsd_check(scod_as_datetime, tafmsd):
-    if isinstance(tafmsd, str):
-        tafmsd = datetime.strptime(tafmsd, "%d-%b-%Y")
-    adjusted_tafmsd = tafmsd + relativedelta(months=36)
-    if adjusted_tafmsd > scod_as_datetime:
+    tafmsd = parse_date(tafmsd)
+    if tafmsd is None:
         return False
+    adjusted_tafmsd = tafmsd + relativedelta(months=36)
+    # Return True if they WILL have more than 36 months TIS by SCOD (ineligible)
+    return adjusted_tafmsd <= scod_as_datetime
 
 
-def board_filter(grade, year, date_of_rank, uif_code, uif_disposition_date, tafmsd, re_status, cafsc, two_afsc, three_afsc, four_afsc):
+def board_filter(grade, year, date_of_rank, uif_code, uif_disposition_date, tafmsd, re_status, pafsc, two_afsc,
+                 three_afsc, four_afsc):
     try:
-        if isinstance(date_of_rank, str):
-            date_of_rank = datetime.strptime(date_of_rank, "%d-%b-%Y")
-        if isinstance(uif_disposition_date, str):
-            uif_disposition_date = datetime.strptime(uif_disposition_date, "%d-%b-%Y")
-        if isinstance(tafmsd, str):
-            tafmsd = datetime.strptime(tafmsd, "%d-%b-%Y")
+        date_of_rank = parse_date(date_of_rank)
+        uif_disposition_date = parse_date(uif_disposition_date)
+        tafmsd = parse_date(tafmsd)
 
-        scod = f'{SCODs.get(grade)}-{year}'
+        # REMOVED the strict None check that was causing all members to be ineligible
+        # Only check for required dates that must be present
+        if date_of_rank is None or tafmsd is None:
+            return False, 'Required date missing or unreadable'
+
+        scod = f'{SCODS.get(grade)}-{year}'
         scod_as_datetime = datetime.strptime(scod, "%d-%b-%Y")
-        tig_selection_month = f'{TIG.get(grade)}-{year}'
+        tig_selection_month = f'{TIG.get(grade)}-{year + 1}'
         formatted_tig_selection_month = datetime.strptime(tig_selection_month, "%d-%b-%Y")
-        tig_eligibility_month = formatted_tig_selection_month - relativedelta(months=tig_months_required.get(grade))
-        tafmsd_required_date = formatted_tig_selection_month - relativedelta(years=TAFMSD.get(grade)-1)
-        hyt_date = tafmsd + relativedelta(years=main_higher_tenure.get(grade))
-        mdos = formatted_tig_selection_month + relativedelta(months=1)
+        tig_eligibility_month = formatted_tig_selection_month - relativedelta(months=TIG_MONTHS_REQUIRED.get(grade))
+        tafmsd_years = TAFMSD.get(grade)
+        if tafmsd_years < 1:
+            months_total = int(tafmsd_years * 12)
+            tafmsd_required_date = formatted_tig_selection_month - relativedelta(months=months_total)
+        else:
+            months_component = int((tafmsd_years % 1) * 12)
+            years_component = int(tafmsd_years)
+            tafmsd_required_date = formatted_tig_selection_month - relativedelta(years=years_component,
+                                                                                 months=months_component)
+        hyt_years = MAIN_HIGHER_TENURE.get(grade)
+        if hyt_years < 1:
+            hyt_months_total = int(hyt_years * 12)
+            hyt_date = tafmsd + relativedelta(months=hyt_months_total)
+        else:
+            hyt_months_component = int((hyt_years % 1) * 12)
+            hyt_years_component = int(hyt_years)
+            hyt_date = tafmsd + relativedelta(years=hyt_years_component, months=hyt_months_component)
+        mdos_month = f'{MDOS.get(grade)}-{year + 1}'
+        mdos = datetime.strptime(mdos_month, "%d-%b-%Y")
         btz_check = None
 
         if grade == 'A1C':
             eligibility_status = check_a1c_eligbility(date_of_rank, year)
-            if eligibility_status == None:
+            if eligibility_status is None:
                 btz_check = btz_elgibility_check(date_of_rank, year)
                 if not btz_check:
                     return None
-            elif eligibility_status == False:
+            elif eligibility_status is False:
                 return False, 'Failed A1C Check.'
-        if grade == 'A1C' or grade == 'AMN' or grade == 'AB':
+        if grade in ('A1C', 'AMN', 'AB'):
             if three_year_tafmsd_check(scod_as_datetime, tafmsd):
-                return False, 'Over 36 months TIS.'
-        if date_of_rank <= tig_eligibility_month:
-            return False, f'TIG: < {tig_months_required.get(grade)} months'
+                return False, 'SRA 2 Feb - 31 Mar or 3yr TIS'
+        if date_of_rank is None or date_of_rank > tig_eligibility_month:
+            return False, f'TIG: < {TIG_MONTHS_REQUIRED.get(grade)} months'
         if tafmsd > tafmsd_required_date:
             return False, f'TIS < {TAFMSD.get(grade)} years'
-        if exception_hyt_start_date < hyt_date < exception_hyt_end_date:
-            hyt_date += relativedelta(years=2)
+        if hyt_start_date < hyt_date < hyt_end_date:
+            exception_hyt_years = EXCEPTION_HIGHER_TENURE.get(grade, MAIN_HIGHER_TENURE.get(grade))
+            hyt_date = tafmsd + relativedelta(years=exception_hyt_years)
         if hyt_date < mdos:
             return False, 'Higher tenure.'
-        if uif_code > 1 and uif_disposition_date < scod_as_datetime:
+        try:
+            uif_code = int(uif_code)
+        except (TypeError, ValueError):
+            uif_code = 0
+        # Allow uif_disposition_date to be None since it's optional
+        if uif_code > 1 and uif_disposition_date and uif_disposition_date < scod_as_datetime:
             return False, f'UIF code: {uif_code}'
-        if re_status in re_codes.keys():
-            return False, f'{re_status}: {re_codes.get(re_status)}'
-        if grade != 'SMS' or 'MSG':
-            if cafsc_check(grade, cafsc, two_afsc, three_afsc, four_afsc) is False:
-                return False, 'Insufficient CAFSC skill level.'
-        if btz_check is not None and btz_check == True:
+        if re_status in RE_CODES.keys():
+            return False, f'{re_status}: {RE_CODES.get(re_status)}'
+        if grade not in ('SMS', 'MSG'):
+            if pafsc_check(grade, pafsc, two_afsc, three_afsc, four_afsc) is False:
+                return False, 'Insufficient PAFSC skill level.'
+        if btz_check is not None and btz_check is True:
             return True, 'btz'
         return True
     except Exception as e:
         print(f"error reading file: {e}")
+        return False, f'Processing error: {str(e)}'
