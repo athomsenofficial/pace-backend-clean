@@ -133,12 +133,12 @@ def board_filter(grade, year, date_of_rank, uif_code, uif_disposition_date, tafm
             uif_code = 0
         # Allow uif_disposition_date to be None since it's optional
         if uif_code > 1 and uif_disposition_date and uif_disposition_date < scod_as_datetime:
-            return False, f'UIF code: {uif_code}'
+            return 'discrepancy', f'UIF code: {uif_code}'
         if re_status in RE_CODES.keys():
-            return False, f'{re_status}: {RE_CODES.get(re_status)}'
+            return 'discrepancy', f'{re_status}: {RE_CODES.get(re_status)}'
         if grade not in ('SMS', 'MSG'):
             if pafsc_check(grade, pafsc, two_afsc, three_afsc, four_afsc) is False:
-                return False, 'Insufficient PAFSC skill level.'
+                return 'discrepancy', 'Insufficient PAFSC skill level.'
         if btz_check is not None and btz_check is True:
             return True, 'btz'
         return True

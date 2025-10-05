@@ -152,7 +152,7 @@ def add_interactive_checkboxes(pdf_path, eligible_data, pascode):
             pass
         return pdf_path
 
-def generate_final_mel_pdf(eligible_data, ineligible_data, senior_rater, senior_raters, cycle, melYear, pascode, pas_info, output_filename, logo_path):
+def generate_final_mel_pdf(eligible_data, ineligible_data, discrepancy_data, senior_rater, senior_raters, cycle, melYear, pascode, pas_info, output_filename, logo_path):
     """Generate a PDF for a single pascode for final MEL with interactive form fields."""
     name_idx = 0; grade_idx = 1; dafsc_idx = 3; unit_idx = 4; pascode_idx = 7
     doc = FinalMELDocument(
@@ -207,6 +207,32 @@ def generate_final_mel_pdf(eligible_data, ineligible_data, senior_rater, senior_
                 table_type="INELIGIBLE", count=len(processed_ineligible_data)
             )
             elements.append(table)
+        processed_discrepancy_data = []
+        if discrepancy_data:
+            if elements: elements.append(PageBreak())
+            for row in discrepancy_data:
+                if len(row) <= max(name_idx, grade_idx, dafsc_idx, unit_idx, pascode_idx): continue
+                name = str(row[name_idx]) if name_idx < len(row) else "Unknown"
+                if len(name) > max_name_length: name = name[:max_name_length - 3] + "..."
+                grade = str(row[grade_idx]) if grade_idx < len(row) else "Unknown"
+                dafsc = str(row[dafsc_idx]) if dafsc_idx < len(row) else "Unknown"
+                unit = str(row[unit_idx]) if unit_idx < len(row) else "Unknown"
+                pascode_val = str(row[pascode_idx]) if pascode_idx < len(row) else "Unknown"
+                reason = "Ineligible"
+                if isinstance(row, pd.Series) and 'REASON' in row.index and pd.notna(row['REASON']):
+                    reason = str(row['REASON'])
+                elif len(row) > 8 and row[8] is not None:
+                    reason = str(row[8])
+                elif len(row) > 5 and isinstance(row[5], str):
+                    reason = row[5]
+                new_row = [name, grade, pascode_val, dafsc, unit, reason]
+                processed_discrepancy_data.append(new_row)
+            if processed_discrepancy_data:
+                table = create_ineligible_table(
+                    doc, data=processed_discrepancy_data, header=INELIGIBLE_HEADER_ROW,
+                    table_type="DISCREPANCY", count=len(processed_discrepancy_data)
+                )
+                elements.append(table)
     doc.build(elements)
     if processed_eligible_data:
         add_interactive_checkboxes(output_filename, processed_eligible_data, pascode)
@@ -251,6 +277,7 @@ def generate_final_roster_pdf(session_id, output_filename="final_military_roster
     session = get_session(session_id)
     eligible_df = pd.DataFrame.from_records(session['eligible_df'])
     ineligible_df = pd.DataFrame.from_records(session['ineligible_df'])
+    discrepancy_df = pd.DataFrame.from_records(session['discrepancy_df'])
     small_unit_df = pd.DataFrame(session['small_unit_df'])
     senior_raters = session['srid_pascode_map']
     cycle = session['cycle']
@@ -260,6 +287,7 @@ def generate_final_roster_pdf(session_id, output_filename="final_military_roster
     if not logo_path: logo_path = os.path.join(images_dir, default_logo)
     eligible_data = eligible_df.values.tolist()
     ineligible_data = ineligible_df.values.tolist()
+    discrepancy_data = discrepancy_df.values.tolist()
     unique_pascodes = set()
     for row in eligible_data + ineligible_data:
         if len(row) > 7 and row[7] is not None:
@@ -270,6 +298,7 @@ def generate_final_roster_pdf(session_id, output_filename="final_military_roster
         if pascode not in pascode_map: continue
         pascode_eligible = [row for row in eligible_data if len(row) > 7 and row[7] == pascode]
         pascode_ineligible = [row for row in ineligible_data if len(row) > 7 and row[7] == pascode]
+        pascode_discrepancy = [row for row in discrepancy_data if len(row) > 7 and row[7] == pascode]
         if not pascode_eligible and not pascode_ineligible: continue
         try:
             if 'ASSIGNED_PAS' in eligible_df.columns:
@@ -288,15 +317,28 @@ def generate_final_roster_pdf(session_id, output_filename="final_military_roster
         }
         temp_filename = f"temp_final_{pascode}.pdf"
         temp_pdf = generate_final_mel_pdf(
-            pascode_eligible, pascode_ineligible, senior_rater, senior_raters,
-            cycle, melYear, pascode, pas_info, temp_filename, logo_path
+            pascode_eligible,
+            pascode_ineligible,
+            pascode_discrepancy,
+            senior_rater,
+            senior_raters,
+            cycle,
+            melYear,
+            pascode,
+            pas_info,
+            temp_filename,
+            logo_path
         )
         if temp_pdf: temp_pdfs.append(temp_pdf)
     if len(small_unit_df) > 0 and senior_rater:
         try:
             small_unit_filename = f"temp_final_small_unit.pdf"
             small_unit_pdf = generate_small_unit_final_mel_pdf(
-                small_unit_df, senior_rater, cycle, melYear, small_unit_filename, logo_path
+                small_unit_df,
+                senior_rater,
+                cycle, melYear,
+                small_unit_filename,
+                logo_path
             )
             if small_unit_pdf: temp_pdfs.append(small_unit_pdf)
         except Exception as e:

@@ -21,7 +21,7 @@ class InitialMELDocument(PDF_Template):
     def __init__(self, filename, cycle, melYear=None, **kwargs):
         super().__init__(filename, cycle, melYear, **kwargs)
 
-def generate_pascode_pdf(eligible_data, ineligible_data, btz_data, cycle, melYear,
+def generate_pascode_pdf(eligible_data, ineligible_data, discrepancy_data, btz_data, cycle, melYear,
                          pascode, pas_info, output_filename, logo_path):
     """Generate a PDF for a single pascode."""
     try:
@@ -41,6 +41,11 @@ def generate_pascode_pdf(eligible_data, ineligible_data, btz_data, cycle, melYea
         if ineligible_data and len(ineligible_data) > 0:
             table = create_table(doc, ineligible_data, INITIAL_MEL_INELIGIBLE_HEADER_ROW,
                                  INITIAL_MEL_INELIGIBLE_TABLE_WIDTHS, "INELIGIBLE", len(ineligible_data))
+            elements.append(table)
+            elements.append(PageBreak())
+        if discrepancy_data and len(discrepancy_data) > 0:
+            table = create_table(doc, discrepancy_data, INITIAL_MEL_INELIGIBLE_HEADER_ROW,
+                                 INITIAL_MEL_INELIGIBLE_TABLE_WIDTHS, "DISCREPANCY", len(discrepancy_data))
             elements.append(table)
             elements.append(PageBreak())
         if btz_data and len(btz_data) > 0:
@@ -93,6 +98,7 @@ def generate_roster_pdf(session_id, output_filename, logo_path=None):
             return None
         eligible_df = pd.DataFrame.from_records(session.get('eligible_df', []))
         ineligible_df = pd.DataFrame.from_records(session.get('ineligible_df', []))
+        discrepancy_df = pd.DataFrame.from_records(session.get('discrepancy_df', []))
         btz_df = pd.DataFrame.from_records(session.get('btz_df', []))
         small_unit_df = pd.DataFrame(session.get('small_unit_df', []))
         cycle = session.get('cycle')
@@ -105,7 +111,12 @@ def generate_roster_pdf(session_id, output_filename, logo_path=None):
         btz_data = btz_df.values.tolist() if not btz_df.empty else []
         ineligible_columns = ['FULL_NAME', 'GRADE', 'ASSIGNED_PAS', 'DAFSC', 'ASSIGNED_PAS_CLEARTEXT', 'REASON']
         available_columns = [col for col in ineligible_columns if col in ineligible_df.columns]
+        available_discrepancy_columns = [col for col in ineligible_columns if col in discrepancy_df.columns]
+
         ineligible_data = ineligible_df[available_columns].values.tolist() if not ineligible_df.empty else []
+        discrepancy_data = discrepancy_df[available_discrepancy_columns].values.tolist() if not discrepancy_df.empty else []
+
+
         unique_pascodes = set()
         for row in eligible_data:
             if len(row) > 7:
@@ -135,6 +146,7 @@ def generate_roster_pdf(session_id, output_filename, logo_path=None):
                 continue
             pascode_eligible = [row for row in eligible_data if len(row) > 7 and row[7] == pascode]
             pascode_ineligible = [row for row in ineligible_data if len(row) > 2 and row[2] == pascode]
+            pascode_discrepancy = [row for row in discrepancy_data if len(row) > 2 and row[2] == pascode]
             pascode_btz = [row for row in btz_data if len(row) > 7 and row[7] == pascode]
             if not pascode_eligible and not pascode_ineligible and not pascode_btz:
                 continue
@@ -152,8 +164,16 @@ def generate_roster_pdf(session_id, output_filename, logo_path=None):
             }
             temp_filename = f"temp_{pascode}.pdf"
             temp_pdf = generate_pascode_pdf(
-                pascode_eligible, pascode_ineligible, pascode_btz, cycle, melYear,
-                pascode, pas_info, temp_filename, logo_path
+                pascode_eligible,
+                pascode_ineligible,
+                pascode_discrepancy,
+                pascode_btz,
+                cycle,
+                melYear,
+                pascode,
+                pas_info,
+                temp_filename,
+                logo_path
             )
             if temp_pdf:
                 temp_pdfs.append(temp_pdf)
@@ -164,7 +184,13 @@ def generate_roster_pdf(session_id, output_filename, logo_path=None):
                 'srid mpf': senior_rater.get("srid", "")[:2] if senior_rater.get("srid") else 'N/A'
             }
             small_unit_pdf = generate_small_unit_pdf(
-                small_unit_df, senior_rater, cycle, melYear, small_unit_pas_info, small_unit_temp_filename, logo_path
+                small_unit_df,
+                senior_rater,
+                cycle,
+                melYear,
+                small_unit_pas_info,
+                small_unit_temp_filename,
+                logo_path
             )
             if small_unit_pdf:
                 temp_pdfs.append(small_unit_pdf)

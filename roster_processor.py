@@ -34,6 +34,8 @@ def roster_processor(roster_df, session_id, cycle, year):
     eligible_btz_service_members = []
     ineligible_service_members = []
     small_unit_eligible_service_members = []
+    discrepancy_service_members = []
+
 
     pascodes = []
     small_unit_pascodes = []
@@ -115,32 +117,45 @@ def roster_processor(roster_df, session_id, cycle, year):
 
         if member_status is None:
             continue
+
+        # Handle tuple or list cases
+        elif isinstance(member_status, (tuple, list)):
+            # Case: discrepancy (tuple of strings)
+            if isinstance(member_status[0], str) and member_status[0] == 'discrepancy':
+                eligible_service_members.append(index)
+                discrepancy_service_members.append(index)
+                reason_for_ineligible_map[index] = member_status[1]
+
+            # Case: BTZ eligible (True, 'btz')
+            elif member_status[0] is True and len(member_status) > 1 and member_status[1] == 'btz':
+                eligible_btz_service_members.append(index)
+
+            # Case: ineligible (False, reason)
+            elif member_status[0] is False:
+                ineligible_service_members.append(index)
+                if len(member_status) > 1:
+                    reason_for_ineligible_map[index] = member_status[1]
+
+        # Handle plain True (no tuple)
         elif member_status is True:
             eligible_service_members.append(index)
-            if row['ASSIGNED_PAS'] in unit_total_map:
-                unit_total_map[row['ASSIGNED_PAS']] += 1
-            else:
-                unit_total_map[row['ASSIGNED_PAS']] = 1
-        elif member_status[0] is True and member_status[1] == 'btz':
-            eligible_btz_service_members.append(index)
-        elif member_status[0] is False:
-            ineligible_service_members.append(index)
-            reason_for_ineligible_map[index] = member_status[1]
+            unit_total_map[row['ASSIGNED_PAS']] = unit_total_map.get(row['ASSIGNED_PAS'], 0) + 1
 
     pascodes = sorted(pascodes)
     update_session(session_id, pascodes=pascodes)
-    update_session(session_id, reason_for_ineligible_map=reason_for_ineligible_map)
-    print(reason_for_ineligible_map)
 
     # Create PDF DataFrames with parsed datetime objects
     pdf_roster = filtered_roster_df[PDF_COLUMNS].copy()
 
     eligible_df = pdf_roster.loc[eligible_service_members].copy() if eligible_service_members else pd.DataFrame()
     ineligible_df = pdf_roster.loc[ineligible_service_members].copy() if ineligible_service_members else pd.DataFrame()
+    discrepancy_df = pdf_roster.loc[discrepancy_service_members].copy() if discrepancy_service_members else pd.DataFrame()
     btz_df = pdf_roster.loc[eligible_btz_service_members].copy() if eligible_btz_service_members else pd.DataFrame()
 
     if not ineligible_df.empty:
         ineligible_df['REASON'] = ineligible_df.index.map(reason_for_ineligible_map)
+    if not discrepancy_df.empty:
+        discrepancy_df['REASON'] = discrepancy_df.index.map(reason_for_ineligible_map)
 
     # NOW format dates for display - only when preparing final output
     def format_df_for_session(df):
@@ -164,6 +179,7 @@ def roster_processor(roster_df, session_id, cycle, year):
     # Apply formatting only for final output
     eligible_df = format_df_for_session(eligible_df)
     ineligible_df = format_df_for_session(ineligible_df)
+    discrepancy_df = format_df_for_session(discrepancy_df)
     btz_df = format_df_for_session(btz_df)
 
     for pascode in unit_total_map:
@@ -181,6 +197,7 @@ def roster_processor(roster_df, session_id, cycle, year):
     # Update session with results
     update_session(session_id, eligible_df=eligible_df)
     update_session(session_id, ineligible_df=ineligible_df)
+    update_session(session_id, discrepancy_df=discrepancy_df)
     update_session(session_id, btz_df=btz_df)
     update_session(session_id, small_unit_df=small_unit_df)
 
