@@ -13,11 +13,14 @@ from reportlab.lib import colors
 cors_origins = [
     "http://localhost:5173",
     "http://localhost:5174",
+    "http://localhost:3000",
     "https://hammerhead-app-bqr7z.ondigitalocean.app",
     "https://api.pace-af-tool.com",
     "https://pace-af-tool.com",
     "https://www.api.pace-af-tool.com",
     "https://www.pace-af-tool.com",
+    # Allow any origin for development/testing (REMOVE IN PRODUCTION)
+    "*",
 ]
 
 allowed_types = [
