@@ -28,6 +28,12 @@ app.add_middleware(
 )
 
 
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint for Docker and load balancers"""
+    return {"status": "healthy", "service": "pace-backend"}
+
+
 @app.post("/api/upload/initial-mel")
 async def upload_file(
         file: UploadFile = File(...),

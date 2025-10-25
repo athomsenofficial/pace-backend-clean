@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+*.md
+!README.md
+
+# Logs and temporary files
+logs/*.log
+tmp/*
+backups/*
+
+# Environment files (will be set via docker-compose)
+.env
+.env.*
+
+# Test files
+test_*.py
+tests/
+*_test.py
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Large binary files (keep in image but don't rebuild when changed)
+*.tar.gz
+*.zip
