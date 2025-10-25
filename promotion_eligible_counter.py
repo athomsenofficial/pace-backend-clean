@@ -1,4 +1,7 @@
-def get_promotion_eligibility(total_eligible, rank='SrA'):
+from typing import Tuple, Union
+
+
+def get_promotion_eligibility(total_eligible: int, rank: str = 'SrA') -> Tuple[Union[int, str], Union[int, str]]:
 
     # Lookup tables based on the document's Tables 4.7 and 4.8
     sra_table = [

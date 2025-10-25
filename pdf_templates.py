@@ -22,7 +22,7 @@ from constants import (
     PDF_FONT_SIZE_CUI, PDF_FONT_SIZE_HEADER, PDF_FONT_SIZE_SUBHEADER,
     PDF_FONT_SIZE_FOOTER, PDF_FONT_SIZE_FOOTER_BOTTOM,
     BODY_FONT, BOLD_FONT, PROMOTION_MAP, date_display_format,
-    PDF_LOGO_SIZE, PDF_LOGO_X, PDF_LOGO_Y_OFFSET, SCODS
+    PDF_LOGO_SIZE, PDF_LOGO_X, PDF_LOGO_Y_OFFSET, SCODS, ACCOUNTING_DATE_OFFSET_DAYS
 )
 
 
@@ -181,9 +181,19 @@ class PDF_Template(BaseDocTemplate):
     def _get_accounting_date(self):
         """Calculate accounting date."""
         try:
-            scod = f'{SCODS.get(self.cycle)}-{self.melYear}'
+            # Determine SCOD year based on month
+            scod_month_day = SCODS.get(self.cycle)
+            month_name = scod_month_day.split('-')[1]
+
+            # SCODs in Jan-Mar use year+1, others use year
+            if month_name in ['JAN', 'FEB', 'MAR']:
+                scod_year = self.melYear + 1
+            else:
+                scod_year = self.melYear
+
+            scod = f'{scod_month_day}-{scod_year}'
             formatted_scod_date = datetime.strptime(scod, "%d-%b-%Y")
-            accounting_date = formatted_scod_date - relativedelta(days=119)
+            accounting_date = formatted_scod_date - relativedelta(days=ACCOUNTING_DATE_OFFSET_DAYS)
             adjusted_accounting_date = accounting_date.replace(day=3, hour=23, minute=59, second=59)
             return adjusted_accounting_date.strftime(date_display_format)
         except Exception as e:

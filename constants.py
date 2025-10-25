@@ -12,6 +12,7 @@ from reportlab.lib import colors
 
 cors_origins = [
     "http://localhost:5173",
+    "http://localhost:5174",
     "https://hammerhead-app-bqr7z.ondigitalocean.app",
     "https://api.pace-af-tool.com",
     "https://pace-af-tool.com",
@@ -56,6 +57,9 @@ max_unit_length = 25
 # Date format strings
 date_input_format = "%d-%b-%Y"
 date_display_format = "%d %B %Y"
+
+# Accounting date offset (days before SCOD)
+ACCOUNTING_DATE_OFFSET_DAYS = 119
 
 # ============================================================================
 # ERROR HANDLING CONSTANTS

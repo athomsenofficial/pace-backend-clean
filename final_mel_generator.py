@@ -275,15 +275,22 @@ def generate_small_unit_final_mel_pdf(small_unit_data, senior_rater, cycle, melY
 def generate_final_roster_pdf(session_id, output_filename="final_military_roster.pdf", logo_path=None):
     """Generate a final MEL PDF with interactive form fields."""
     session = get_session(session_id)
-    eligible_df = pd.DataFrame.from_records(session['eligible_df'])
-    ineligible_df = pd.DataFrame.from_records(session['ineligible_df'])
-    discrepancy_df = pd.DataFrame.from_records(session['discrepancy_df'])
-    small_unit_df = pd.DataFrame(session['small_unit_df'])
-    senior_raters = session['srid_pascode_map']
-    cycle = session['cycle']
-    melYear = session['year']
-    pascode_map = session['pascode_map']
-    senior_rater = session['small_unit_sr']
+
+    # Validate session exists
+    if not session:
+        print(f"Error: Session {session_id} not found or expired")
+        return None
+
+    # Safely get data with defaults
+    eligible_df = pd.DataFrame.from_records(session.get('eligible_df', []))
+    ineligible_df = pd.DataFrame.from_records(session.get('ineligible_df', []))
+    discrepancy_df = pd.DataFrame.from_records(session.get('discrepancy_df', []))
+    small_unit_df = pd.DataFrame(session.get('small_unit_df', []))
+    senior_raters = session.get('srid_pascode_map', {})
+    cycle = session.get('cycle')
+    melYear = session.get('year')
+    pascode_map = session.get('pascode_map', {})
+    senior_rater = session.get('small_unit_sr', {})
     if not logo_path: logo_path = os.path.join(images_dir, default_logo)
     eligible_data = eligible_df.values.tolist()
     ineligible_data = ineligible_df.values.tolist()
@@ -305,7 +312,8 @@ def generate_final_roster_pdf(session_id, output_filename="final_military_roster
                 eligible_candidates = (eligible_df['ASSIGNED_PAS'] == pascode).sum()
             else:
                 eligible_candidates = len(pascode_eligible)
-        except:
+        except Exception as e:
+            print(f"Warning: Could not calculate eligible candidates from DataFrame: {e}")
             eligible_candidates = len(pascode_eligible)
         is_small_unit = eligible_candidates <= small_unit_threshold
         must_promote, promote_now = get_promotion_eligibility(eligible_candidates, cycle)

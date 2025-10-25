@@ -8,15 +8,19 @@ from dotenv import load_dotenv
 import base64
 from constants import session_ttl
 from datetime import datetime
+from typing import Optional, Dict, Any
 
 load_dotenv()
 
 REDIS_URL = os.getenv("REDIS_URL")
+if not REDIS_URL:
+    raise ValueError("REDIS_URL environment variable is required. Please set it in your .env file.")
 r = redis.from_url(REDIS_URL, decode_responses=True)
 
 
-def create_session(processed_df: pd.DataFrame, pdf_df: pd.DataFrame):
-    session_id = str(uuid.uuid4())
+def create_session(processed_df: pd.DataFrame, pdf_df: pd.DataFrame, session_id: Optional[str] = None) -> str:
+    if session_id is None:
+        session_id = str(uuid.uuid4())
 
     def convert_datetime_columns(df):
         """Convert all datetime columns to strings before creating records"""
@@ -51,14 +55,14 @@ def create_session(processed_df: pd.DataFrame, pdf_df: pd.DataFrame):
     r.set(session_id, json.dumps(session_data), ex=session_ttl)
     return session_id
 
-def get_session(session_id):
+def get_session(session_id: str) -> Optional[Dict[str, Any]]:
     raw = r.get(session_id)
     if not raw:
         return None
     return json.loads(raw)
 
 
-def update_session(session_id, **kwargs):
+def update_session(session_id: str, **kwargs) -> Optional[Dict[str, Any]]:
     session = r.get(session_id)
     if not session:
         return None
@@ -95,16 +99,16 @@ def update_session(session_id, **kwargs):
     return session
 
 
-def delete_session(session_id):
+def delete_session(session_id: str) -> None:
     r.delete(session_id)
 
 
-def store_pdf_in_redis(session_id: str, pdf_buffer: BytesIO):
+def store_pdf_in_redis(session_id: str, pdf_buffer: BytesIO) -> None:
     encoded = base64.b64encode(pdf_buffer.getvalue()).decode("utf-8")
     r.set(f"{session_id}_pdf", encoded, ex=session_ttl)
 
 
-def get_pdf_from_redis(session_id: str) -> BytesIO | None:
+def get_pdf_from_redis(session_id: str) -> Optional[BytesIO]:
     encoded = r.get(f"{session_id}_pdf")
     if not encoded:
         return None

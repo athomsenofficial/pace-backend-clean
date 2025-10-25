@@ -1,8 +1,13 @@
 import pandas as pd
 from datetime import datetime
+from typing import Optional, List, Union
 
 
-def parse_date(value, error_log=None, full_name=None):
+def parse_date(
+    value: Union[str, int, float, datetime, pd.Timestamp, None],
+    error_log: Optional[List[str]] = None,
+    full_name: Optional[str] = None
+) -> Optional[datetime]:
     if pd.isna(value) or value is None or value == '':
         return None
 

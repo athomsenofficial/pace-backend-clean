@@ -14,8 +14,6 @@ from constants import (
 )
 from pdf_templates import PDF_Template, create_table, merge_pdfs
 
-
-
 class InitialMELDocument(PDF_Template):
     """Document template for Initial MEL reports, inheriting from the base template."""
     def __init__(self, filename, cycle, melYear=None, **kwargs):
@@ -95,7 +93,10 @@ def generate_roster_pdf(session_id, output_filename, logo_path=None):
     try:
         session = get_session(session_id)
         if not session:
+            print(f"Error: Session {session_id} not found or expired")
             return None
+
+        # Safely get data with defaults
         eligible_df = pd.DataFrame.from_records(session.get('eligible_df', []))
         ineligible_df = pd.DataFrame.from_records(session.get('ineligible_df', []))
         discrepancy_df = pd.DataFrame.from_records(session.get('discrepancy_df', []))
