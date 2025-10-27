@@ -96,16 +96,13 @@ def roster_processor(roster_df, session_id, cycle, year):
             continue
 
         # Check projected grades FIRST - this determines if they should be on the roster
-        # CRITICAL FIX: Use .get() for optional columns to prevent KeyError
-        projected_grade = row.get('GRADE_PERM_PROJ')
-
         # If projected for next grade (e.g., MSG when cycle is TSG), exclude completely - skip silently
-        if projected_grade == PROMOTIONAL_MAP.get(cycle):
+        if row['GRADE_PERM_PROJ'] == PROMOTIONAL_MAP.get(cycle):
             continue
 
         # Check if member should be included in this cycle's roster
         # Include if: (1) current grade matches cycle OR (2) projected for this cycle
-        has_projected_grade = projected_grade == cycle
+        has_projected_grade = row['GRADE_PERM_PROJ'] == cycle
         grade_matches_cycle = row['GRADE'] == cycle or (row['GRADE'] == 'A1C' and cycle == 'SRA')
 
         # Skip if wrong cycle - skip silently
@@ -122,7 +119,7 @@ def roster_processor(roster_df, session_id, cycle, year):
         logger.info(f"ROW {index}: Processing {member_name} (SSAN: {ssan})")
         logger.info(f"  Current Grade: {grade}")
         logger.info(f"  Promotion Cycle: {cycle} {year}")
-        logger.info(f"  Projected Grade: {projected_grade if projected_grade else 'None'}")
+        logger.info(f"  Projected Grade: {row.get('GRADE_PERM_PROJ', 'None')}")
         logger.info(f"  ✓ Grade matches cycle or projected for cycle")
         logger.info(f"  ✓ Accounting date check passed")
 
@@ -309,51 +306,3 @@ def roster_processor(roster_df, session_id, cycle, year):
     LoggerSetup.close_session_logger(session_id)
 
     return
-
-
-def recalculate_small_units(session_id):
-    """
-    Recalculate small_unit_df after add/edit/delete operations.
-    This ensures senior_rater_needed flag is correctly set based on current data.
-    """
-    session = get_session(session_id)
-    if not session:
-        return
-
-    cycle = session.get('cycle', 'SSG')
-    eligible_df = session.get('eligible_df', pd.DataFrame())
-
-    # Convert to DataFrame if it's a list
-    if isinstance(eligible_df, list):
-        eligible_df = pd.DataFrame(eligible_df)
-
-    # If no eligible members, clear small_unit_df
-    if eligible_df.empty:
-        update_session(session_id, small_unit_df=pd.DataFrame())
-        return
-
-    # Count eligible members per pascode
-    unit_total_map = {}
-    for _, row in eligible_df.iterrows():
-        pascode = row.get('ASSIGNED_PAS', '')
-        if pascode:
-            unit_total_map[pascode] = unit_total_map.get(pascode, 0) + 1
-
-    # Determine which pascodes are small units
-    small_unit_pascodes = []
-    for pascode in unit_total_map:
-        if cycle == 'MSG' or cycle == 'SMS':
-            # MSG and SMS cycles: all units are small units
-            small_unit_pascodes.append(pascode)
-        elif unit_total_map[pascode] <= small_unit_threshold:
-            # Other cycles: units with <= threshold eligible members
-            small_unit_pascodes.append(pascode)
-
-    # Extract small unit members from eligible_df
-    if small_unit_pascodes:
-        small_unit_df = eligible_df[eligible_df['ASSIGNED_PAS'].isin(small_unit_pascodes)].copy()
-    else:
-        small_unit_df = pd.DataFrame()
-
-    # Update session with the recalculated small_unit_df
-    update_session(session_id, small_unit_df=small_unit_df)

@@ -19,7 +19,8 @@ cors_origins = [
     "https://pace-af-tool.com",
     "https://www.api.pace-af-tool.com",
     "https://www.pace-af-tool.com",
-    # SECURITY FIX: Removed wildcard "*" - CORS now limited to specific origins only
+    # Allow any origin for development/testing (REMOVE IN PRODUCTION)
+    "*",
 ]
 
 allowed_types = [

@@ -243,26 +243,14 @@ def generate_small_unit_final_mel_pdf(small_unit_data, senior_rater, cycle, melY
     try:
         srid_list = small_unit_data.values.tolist() if hasattr(small_unit_data, 'values') else small_unit_data
         must_promote, promote_now = get_promotion_eligibility(len(srid_list), cycle)
-
-        # Format commander name for FD Name and FDID
-        commander_last = senior_rater.get('commander_last_name', '')
-        commander_first = senior_rater.get('commander_first_name', '')
-        commander_middle = senior_rater.get('commander_middle_name', '')
-        commander_name = f"{commander_last}, {commander_first}"
-        if commander_middle:
-            commander_name += f" {commander_middle}"
-        commander_name = commander_name.strip().strip(',')
-
         doc = FinalMELDocument(
             output_filename, cycle=cycle, melYear=melYear,
             rightMargin=PDF_MARGIN, leftMargin=PDF_MARGIN,
             topMargin=PDF_MARGIN, bottomMargin=PDF_MARGIN
         )
-        # For small units: use commander name for FD Name, SRID for FDID, senior rater info for signature block
         doc.pas_info = {
             'srid': senior_rater['srid'],
-            'fd name': commander_name if commander_name else 'N/A',
-            'fdid': f'{senior_rater["srid"]}',
+            'fd name': senior_rater['senior_rater_name'],
             'rank': senior_rater['senior_rater_rank'],
             'title': senior_rater['senior_rater_title'],
             'srid mpf': senior_rater['srid'][:2] if len(senior_rater['srid']) >= 2 else senior_rater['srid'],
@@ -294,38 +282,10 @@ def generate_final_roster_pdf(session_id, output_filename="final_military_roster
         return None
 
     # Safely get data with defaults
-    def clean_dataframe(records):
-        """Clean dataframe by removing deleted records and internal columns"""
-        df = pd.DataFrame.from_records(records) if records else pd.DataFrame()
-
-        # Filter out soft-deleted records
-        if 'deleted' in df.columns:
-            df = df[df['deleted'] != True]
-
-        # Remove internal delete-related columns AND any UI-only columns
-        columns_to_drop = ['deleted', 'deletion_reason', 'member_id',
-                          'REENL_ELIG_STATUS', 'UIF_CODE', 'UIF_DISPOSITION_DATE',
-                          'GRADE_PERM_PROJ', '2AFSC', '3AFSC', '4AFSC']
-        for col in columns_to_drop:
-            if col in df.columns:
-                df = df.drop(columns=[col])
-
-        # Ensure only PDF-appropriate columns remain
-        from constants import PDF_COLUMNS
-        expected_cols = PDF_COLUMNS + ['REASON', 'SSAN', 'PAFSC']  # Include some extra cols that might be needed
-
-        # Filter to only keep expected columns
-        df_cols = df.columns.tolist()
-        cols_to_keep = [col for col in df_cols if col in expected_cols or col in ['FULL_NAME', 'GRADE', 'DATE_ARRIVED_STATION', 'DAFSC', 'ASSIGNED_PAS_CLEARTEXT', 'DOR', 'TAFMSD', 'ASSIGNED_PAS', 'REASON']]
-        if cols_to_keep:
-            df = df[cols_to_keep]
-
-        return df
-
-    eligible_df = clean_dataframe(session.get('eligible_df', []))
-    ineligible_df = clean_dataframe(session.get('ineligible_df', []))
-    discrepancy_df = clean_dataframe(session.get('discrepancy_df', []))
-    small_unit_df = clean_dataframe(session.get('small_unit_df', []))
+    eligible_df = pd.DataFrame.from_records(session.get('eligible_df', []))
+    ineligible_df = pd.DataFrame.from_records(session.get('ineligible_df', []))
+    discrepancy_df = pd.DataFrame.from_records(session.get('discrepancy_df', []))
+    small_unit_df = pd.DataFrame(session.get('small_unit_df', []))
     senior_raters = session.get('srid_pascode_map', {})
     cycle = session.get('cycle')
     melYear = session.get('year')
@@ -357,20 +317,9 @@ def generate_final_roster_pdf(session_id, output_filename="final_military_roster
             eligible_candidates = len(pascode_eligible)
         is_small_unit = eligible_candidates <= small_unit_threshold
         must_promote, promote_now = get_promotion_eligibility(eligible_candidates, cycle)
-
-        # Format commander name for FD Name
-        commander_last = pascode_map[pascode].get('commander_last_name', '')
-        commander_first = pascode_map[pascode].get('commander_first_name', '')
-        commander_middle = pascode_map[pascode].get('commander_middle_name', '')
-        commander_name = f"{commander_last}, {commander_first}"
-        if commander_middle:
-            commander_name += f" {commander_middle}"
-        commander_name = commander_name.strip().strip(',')
-
-        # For large units, use commander info for signature block
         pas_info = {
-            'srid': pascode_map[pascode]['srid'], 'fd name': commander_name if commander_name else 'N/A',
-            'rank': pascode_map[pascode].get('commander_rank', 'N/A'), 'title': pascode_map[pascode].get('commander_title', 'N/A'),
+            'srid': pascode_map[pascode]['srid'], 'fd name': pascode_map[pascode]['senior_rater_name'],
+            'rank': pascode_map[pascode]['senior_rater_rank'], 'title': pascode_map[pascode]['senior_rater_title'],
             'fdid': f'{pascode_map[pascode]["srid"]}{pascode[-4:]}', 'srid mpf': pascode[:2],
             'mp': must_promote, 'pn': promote_now, 'is_small_unit': is_small_unit
         }
