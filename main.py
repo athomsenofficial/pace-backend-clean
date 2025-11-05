@@ -1354,3 +1354,255 @@ async def download_final_mel(session_id: str):
             content={"error": f"Failed to retrieve PDF: {str(e)}"},
             status_code=500
         )
+
+
+# ============================================================================
+# DOCUMENT GENERATOR ENDPOINTS
+# ============================================================================
+
+from document_generator.models import (
+    DocumentGenerationRequest, DocumentResponse, DocumentType,
+    MFRContent, MemoContent, AppointmentContent, AdministrativeActionContent
+)
+from document_generator.generators import (
+    MFRGenerator, MemoGenerator, AppointmentGenerator,
+    LOCGenerator, LOAGenerator, LORGenerator
+)
+from document_generator.prompt_parser import PromptParser
+from document_generator.validation import DocumentValidator
+from constants import AF_DOCUMENT_TYPES, DOCUMENT_SESSION_TTL
+
+
+@app.get("/api/documents/templates")
+async def list_document_templates():
+    """List available document templates with examples"""
+    templates = [
+        {
+            "type": "mfr",
+            "name": "Memorandum For Record",
+            "description": "Internal documentation of events, decisions, or conversations",
+            "required_fields": ["subject", "body_paragraphs"],
+            "optional_fields": ["distribution_list", "attachments"],
+            "example_prompts": [
+                "Create an MFR documenting a safety briefing on 15 Jan 2025",
+                "MFR about phone call with finance office regarding TDY voucher on 10 Jan 2025"
+            ]
+        },
+        {
+            "type": "memo",
+            "name": "Official Memorandum",
+            "description": "Formal communication between organizations or offices",
+            "required_fields": ["to_line", "subject", "body_paragraphs"],
+            "optional_fields": ["thru_line", "distribution_list", "attachments"],
+            "example_prompts": [
+                "Create a memo to 51 FSS/CCF about the training schedule for February 2025",
+                "Official memo requesting additional manning support for upcoming inspection"
+            ]
+        },
+        {
+            "type": "appointment",
+            "name": "Appointment Letter",
+            "description": "Assign duties, responsibilities, and authorities to a member",
+            "required_fields": ["appointee_name", "appointee_rank", "position_title", "authority_citation", "duties", "effective_date"],
+            "optional_fields": ["appointee_ssan", "termination_date"],
+            "example_prompts": [
+                "Appoint SSgt John Smith as Squadron Safety Representative per AFI 91-202 effective 15 Jan 2025",
+                "Create appointment letter for TSgt Jane Doe as Unit Fitness Program Manager"
+            ]
+        },
+        {
+            "type": "loc",
+            "name": "Letter of Counseling",
+            "description": "Initial corrective action for minor infractions",
+            "required_fields": ["member_name", "member_rank", "incident_date", "incident_description", "violations", "standards_expected", "consequences"],
+            "optional_fields": ["member_ssan"],
+            "example_prompts": [
+                "Create LOC for SrA Smith who was late to duty on 10 Jan 2025 violating AFI 36-2618",
+                "LOC for uniform violation on 5 Jan 2025"
+            ]
+        },
+        {
+            "type": "loa",
+            "name": "Letter of Admonishment",
+            "description": "Mid-level corrective action for repeated or more serious infractions",
+            "required_fields": ["member_name", "member_rank", "incident_date", "incident_description", "violations", "standards_expected", "consequences"],
+            "optional_fields": ["member_ssan", "previous_actions", "appeal_rights"],
+            "example_prompts": [
+                "Create LOA for repeated tardiness despite previous LOC",
+                "LOA for failure to follow lawful order on 12 Jan 2025"
+            ]
+        },
+        {
+            "type": "lor",
+            "name": "Letter of Reprimand",
+            "description": "Serious corrective action filed in personnel records",
+            "required_fields": ["member_name", "member_rank", "incident_date", "incident_description", "violations", "standards_expected", "consequences", "filing_location"],
+            "optional_fields": ["member_ssan", "previous_actions", "appeal_rights"],
+            "example_prompts": [
+                "Create LOR for DUI incident on 1 Jan 2025 to be filed in PIF",
+                "LOR for dereliction of duty violating AFI 1-1"
+            ]
+        }
+    ]
+
+    return JSONResponse(content={"templates": templates})
+
+
+@app.post("/api/documents/generate")
+async def generate_document(request: DocumentGenerationRequest):
+    """
+    Generate a document from a natural language prompt
+
+    This endpoint:
+    1. Parses the prompt to extract structured data
+    2. Validates the extracted information
+    3. Creates a document session in Redis
+    4. Returns extracted fields for user review/editing
+    """
+    try:
+        # Create document session ID
+        document_id = str(uuid.uuid4())
+
+        # Parse the prompt
+        parser = PromptParser()
+        extracted_fields = parser.parse_prompt(request.prompt, request.document_type.value)
+
+        # Add metadata to extracted fields
+        extracted_fields['metadata'] = request.metadata.model_dump()
+
+        # Store in Redis session with longer TTL (2 hours vs 30 min for MEL)
+        update_session(document_id,
+                      document_type=request.document_type.value,
+                      extracted_fields=extracted_fields,
+                      original_prompt=request.prompt,
+                      status='draft')
+
+        # Validate extracted content (warnings only, not blocking)
+        validation_warnings = []
+
+        if request.document_type == DocumentType.MFR:
+            if not extracted_fields.get('subject'):
+                validation_warnings.append("Could not extract subject line from prompt")
+            if not extracted_fields.get('body_hints'):
+                validation_warnings.append("Could not extract body content from prompt")
+
+        elif request.document_type == DocumentType.APPOINTMENT:
+            if not extracted_fields.get('appointee_name'):
+                validation_warnings.append("Could not extract appointee name from prompt")
+            if not extracted_fields.get('authority_citation'):
+                validation_warnings.append("AFI citation not found - will need to be added manually")
+
+        response = DocumentResponse(
+            document_id=document_id,
+            session_id=document_id,  # Using same ID for simplicity
+            document_type=request.document_type.value,
+            status='draft',
+            message="Document draft created. Review extracted fields and generate PDF.",
+            extracted_fields=extracted_fields,
+            validation_warnings=validation_warnings,
+            pdf_url=f"/api/documents/{document_id}/generate-pdf"
+        )
+
+        return JSONResponse(content=response.model_dump())
+
+    except Exception as e:
+        return JSONResponse(
+            content={"error": f"Failed to generate document: {str(e)}"},
+            status_code=500
+        )
+
+
+@app.post("/api/documents/{document_id}/generate-pdf")
+async def generate_document_pdf(
+    document_id: str,
+    content: Dict = Body(...)
+):
+    """
+    Generate final PDF from document content
+
+    Accepts the full document content (after user review/editing) and generates PDF
+    """
+    try:
+        # Get session to retrieve document type
+        session = get_session(document_id)
+
+        if not session:
+            return JSONResponse(
+                content={"error": "Document session not found or expired"},
+                status_code=404
+            )
+
+        document_type = session.get('document_type')
+        metadata_dict = content.get('metadata', {})
+
+        # Convert metadata dict to DocumentMetadata model
+        from document_generator.models import DocumentMetadata
+        metadata = DocumentMetadata(**metadata_dict)
+
+        # Generate PDF based on document type
+        pdf_buffer = None
+
+        if document_type == 'mfr':
+            mfr_content = MFRContent(**content.get('content', {}))
+            generator = MFRGenerator()
+            pdf_buffer = generator.generate(mfr_content, metadata)
+
+        elif document_type == 'memo':
+            memo_content = MemoContent(**content.get('content', {}))
+            generator = MemoGenerator()
+            pdf_buffer = generator.generate(memo_content, metadata)
+
+        elif document_type == 'appointment':
+            appt_content = AppointmentContent(**content.get('content', {}))
+            generator = AppointmentGenerator()
+            pdf_buffer = generator.generate(appt_content, metadata)
+
+        elif document_type == 'loc':
+            loc_content = AdministrativeActionContent(**content.get('content', {}))
+            generator = LOCGenerator()
+            pdf_buffer = generator.generate(loc_content, metadata)
+
+        elif document_type == 'loa':
+            loa_content = AdministrativeActionContent(**content.get('content', {}))
+            generator = LOAGenerator()
+            pdf_buffer = generator.generate(loa_content, metadata)
+
+        elif document_type == 'lor':
+            lor_content = AdministrativeActionContent(**content.get('content', {}))
+            generator = LORGenerator()
+            pdf_buffer = generator.generate(lor_content, metadata)
+
+        else:
+            return JSONResponse(
+                content={"error": f"Unsupported document type: {document_type}"},
+                status_code=400
+            )
+
+        if not pdf_buffer:
+            return JSONResponse(
+                content={"error": "PDF generation failed"},
+                status_code=500
+            )
+
+        # Store PDF in Redis
+        from session_manager import store_pdf_in_redis
+        store_pdf_in_redis(document_id, pdf_buffer)
+
+        # Update session status
+        update_session(document_id, status='finalized')
+
+        # Return PDF as streaming response
+        pdf_buffer.seek(0)
+        return StreamingResponse(
+            pdf_buffer,
+            media_type='application/pdf',
+            headers={
+                "Content-Disposition": f"attachment; filename={document_type}_{document_id[:8]}.pdf"
+            }
+        )
+
+    except Exception as e:
+        return JSONResponse(
+            content={"error": f"Failed to generate PDF: {str(e)}"},
+            status_code=500
+        )

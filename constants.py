@@ -512,3 +512,48 @@ PDF_CHECKBOX_START_Y_PERCENT = 0.276  # Percentage of page height
 PDF_CHECKBOX_ROW_HEIGHT_PERCENT = 0.0295  # Percentage of page height
 PDF_CHECKBOX_COL_WIDTH_PERCENT = 0.045  # Percentage of page width
 PDF_CHECKBOX_MAX_ROWS_PER_PAGE = 20
+
+# ============================================================================
+# AF DOCUMENT GENERATOR CONSTANTS
+# ============================================================================
+
+# Document types supported
+AF_DOCUMENT_TYPES = ['mfr', 'memo', 'appointment', 'loc', 'loa', 'lor']
+
+# Common Air Force Instruction (AFI) citations
+COMMON_AFIS = {
+    "AFI 33-321": "Tongue and Quill",
+    "AFI 36-2618": "The Enlisted Force Structure",
+    "AFI 91-202": "The US Air Force Mishap Prevention Program",
+    "AFI 36-2907": "Unfavorable Information File (UIF) Program",
+    "AFI 1-1": "Air Force Standards",
+    "AFI 36-2608": "Military Personnel Records System",
+    "AFI 36-2406": "Officer and Enlisted Evaluation Systems",
+    "AFI 36-2110": "Assignments",
+    "AFI 36-3003": "Military Leave Program",
+    "AFI 51-202": "Nonjudicial Punishment"
+}
+
+# Valid rank abbreviations (reuse from existing GRADE_MAP keys)
+# Enlisted ranks
+AF_ENLISTED_RANK_ABBR = ['AB', 'Amn', 'A1C', 'SrA', 'SSgt', 'TSgt', 'MSgt', 'SMSgt', 'CMSgt']
+
+# Officer ranks
+AF_OFFICER_RANK_ABBR = ['2d Lt', '1st Lt', 'Capt', 'Maj', 'Lt Col', 'Col', 'Brig Gen', 'Maj Gen', 'Lt Gen', 'Gen']
+
+# Administrative action filing locations
+AF_ADMIN_ACTION_FILING = {
+    'PIF': 'Personnel Information File (6 months - 3 years)',
+    'DCAF': 'Disciplinary Control and Actions File (Unfavorable)',
+    'UPRG': 'Unit Personnel Record Group (Most serious)'
+}
+
+# Appeal rights timeline (days)
+AF_APPEAL_TIMELINE_DAYS = {
+    'LOC': 3,  # 3 duty days to acknowledge
+    'LOA': 3,  # 3 duty days to acknowledge
+    'LOR': 30  # 30 calendar days to submit rebuttal
+}
+
+# Document session TTL (seconds) - 2 hours for documents vs 30 min for MEL
+DOCUMENT_SESSION_TTL = 7200
