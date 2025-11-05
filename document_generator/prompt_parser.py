@@ -11,15 +11,18 @@ class PromptParser:
     """Extract structured information from natural language prompts"""
 
     @staticmethod
-    def parse_date(date_str: str) -> Optional[date]:
+    def parse_date(date_str: str) -> Optional[str]:
         """
-        Parse various date formats
+        Parse various date formats and return as ISO string
 
         Supported formats:
         - 15 Jan 2025
         - 01/15/2025
         - 2025-01-15
         - January 15, 2025
+
+        Returns:
+            ISO format date string (YYYY-MM-DD) or None
         """
         date_patterns = [
             (r'(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})', '%d %b %Y'),
@@ -39,7 +42,8 @@ class PromptParser:
                         date_string = match.group(0)
 
                     parsed_date = datetime.strptime(date_string, fmt)
-                    return parsed_date.date()
+                    # Return ISO format string for JSON serialization
+                    return parsed_date.date().isoformat()
                 except ValueError:
                     continue
 

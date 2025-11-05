@@ -1467,8 +1467,8 @@ async def generate_document(request: DocumentGenerationRequest):
         parser = PromptParser()
         extracted_fields = parser.parse_prompt(request.prompt, request.document_type.value)
 
-        # Add metadata to extracted fields
-        extracted_fields['metadata'] = request.metadata.model_dump()
+        # Add metadata to extracted fields (serialize dates as ISO strings)
+        extracted_fields['metadata'] = request.metadata.model_dump(mode='json')
 
         # Store in Redis session with longer TTL (2 hours vs 30 min for MEL)
         update_session(document_id,
@@ -1503,7 +1503,7 @@ async def generate_document(request: DocumentGenerationRequest):
             pdf_url=f"/api/documents/{document_id}/generate-pdf"
         )
 
-        return JSONResponse(content=response.model_dump())
+        return JSONResponse(content=response.model_dump(mode='json'))
 
     except Exception as e:
         return JSONResponse(
