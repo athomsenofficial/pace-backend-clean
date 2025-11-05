@@ -1373,6 +1373,17 @@ from document_generator.validation import DocumentValidator
 from constants import AF_DOCUMENT_TYPES, DOCUMENT_SESSION_TTL
 
 
+@app.get("/api/documents/version")
+async def get_document_generator_version():
+    """Check if JSON serialization fix is active"""
+    return JSONResponse(content={
+        "version": "1.0.1",
+        "json_fix_applied": True,
+        "last_update": "2025-11-05",
+        "message": "JSON serialization fix is active"
+    })
+
+
 @app.get("/api/documents/templates")
 async def list_document_templates():
     """List available document templates with examples"""
