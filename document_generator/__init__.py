@@ -11,40 +11,15 @@ Supported document types:
 - Letter of Counseling (LOC)
 - Letter of Admonishment (LOA)
 - Letter of Reprimand (LOR)
+
+Usage:
+    from document_generator.models import DocumentGenerationRequest
+    from document_generator.generators import MFRGenerator
 """
 
-from .models import (
-    DocumentType,
-    DocumentMetadata,
-    DocumentGenerationRequest,
-    MFRContent,
-    MemoContent,
-    AppointmentContent,
-    AdministrativeActionContent
-)
-
-from .generators import (
-    MFRGenerator,
-    MemoGenerator,
-    AppointmentGenerator,
-    LOCGenerator,
-    LOAGenerator,
-    LORGenerator
-)
-
 __version__ = "1.0.0"
-__all__ = [
-    "DocumentType",
-    "DocumentMetadata",
-    "DocumentGenerationRequest",
-    "MFRContent",
-    "MemoContent",
-    "AppointmentContent",
-    "AdministrativeActionContent",
-    "MFRGenerator",
-    "MemoGenerator",
-    "AppointmentGenerator",
-    "LOCGenerator",
-    "LOAGenerator",
-    "LORGenerator"
-]
+
+# Note: Import classes directly from submodules to avoid circular imports
+# Example:
+#   from document_generator.models import DocumentType, MFRContent
+#   from document_generator.generators import MFRGenerator
