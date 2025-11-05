@@ -1,0 +1,71 @@
+================================================================
+EXACT CODE CHANGES FOR DOCUMENT GENERATOR NAVIGATION
+================================================================
+
+Copy these exact snippets into your pace-frontend-modern files.
+
+================================================================
+FILE 1: src/App.tsx
+================================================================
+
+CHANGE 1: Add this import on line 4 (after the other imports):
+------------------------------------------------------------------
+import { DocumentGenerator } from '@/pages/DocumentGenerator'
+------------------------------------------------------------------
+
+CHANGE 2: Add this route on line 25 (after the /how-to route):
+------------------------------------------------------------------
+<Route path="/document-generator" element={<Layout><DocumentGenerator /></Layout>} />
+------------------------------------------------------------------
+
+
+================================================================
+FILE 2: src/shared/components/layout/Header.tsx
+================================================================
+
+Find the section with navigation links (around line 40-70).
+Add this code AFTER the "How To" link and BEFORE the Admin section:
+
+------------------------------------------------------------------
+{/* Document Generator */}
+<Link
+  to="/document-generator"
+  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+    isActive('/document-generator')
+      ? 'bg-indigo-700 text-white'
+      : 'text-indigo-100 hover:bg-indigo-600 hover:text-white'
+  }`}
+>
+  Document Generator
+</Link>
+------------------------------------------------------------------
+
+
+================================================================
+VERIFICATION
+================================================================
+
+After making these changes:
+
+1. Your App.tsx line 4 should have both:
+   import { Dashboard, InitialMEL, FinalMEL, HowTo } from '@/pages'
+   import { DocumentGenerator } from '@/pages/DocumentGenerator'
+
+2. Your routes section should include:
+   <Route path="/document-generator" element={<Layout><DocumentGenerator /></Layout>} />
+
+3. Your Header navigation should show:
+   Dashboard | MEL | How To | Document Generator | Admin
+
+4. Clicking "Document Generator" navigates to /document-generator
+
+================================================================
+QUICK TEST
+================================================================
+
+npm run dev
+# Navigate to http://localhost:5173
+# Click "Document Generator" in nav bar
+# Should see the document type selection page
+
+================================================================
