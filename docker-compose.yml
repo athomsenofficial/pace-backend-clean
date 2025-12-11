@@ -2,17 +2,19 @@ version: '3.8'
 
 services:
   # Redis service for session management
+  # SECURITY: No external port exposure - only accessible within Docker network
   redis:
     image: redis:7.4-alpine
     container_name: pace-redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    # REMOVED: ports exposure - Redis only accessible within Docker network
+    # This prevents external access to Redis from the internet
     volumes:
       - redis_data:/data
-    command: redis-server --save 60 1 --loglevel warning --maxmemory 512mb --maxmemory-policy allkeys-lru
+    # SECURITY: Added password authentication
+    command: redis-server --save 60 1 --loglevel warning --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-PaceRedis2025!Secure}
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-PaceRedis2025!Secure}", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -26,10 +28,12 @@ services:
       dockerfile: Dockerfile
     container_name: pace-backend
     restart: unless-stopped
+    # SECURITY: Bind to localhost only - nginx reverse proxy handles external traffic
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
-      - REDIS_URL=redis://redis:6379
+      # SECURITY: Redis URL now includes password authentication
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-PaceRedis2025!Secure}@redis:6379
     volumes:
       - ./logs:/app/logs
       - ./tmp:/app/tmp
