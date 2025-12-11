@@ -34,6 +34,8 @@ services:
     environment:
       # SECURITY: Redis URL now includes password authentication
       - REDIS_URL=redis://:${REDIS_PASSWORD:-PaceRedis2025!Secure}@redis:6379
+      # SECURITY: Encryption key for session data at rest (CUI compliance)
+      - SESSION_ENCRYPTION_KEY=${SESSION_ENCRYPTION_KEY:-6sbR6vIj9f0NA_PzYHkdWE1Ivf9lMtBaZ0trCJVoHOI=}
     volumes:
       - ./logs:/app/logs
       - ./tmp:/app/tmp

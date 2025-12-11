@@ -9,6 +9,7 @@ click==8.2.1
 colorama==0.4.6
 configobj==5.0.9
 configparser==7.2.0
+cryptography==44.0.0
 dnspython==2.7.0
 email_validator==2.2.0
 et_xmlfile==2.0.0

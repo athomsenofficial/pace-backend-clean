@@ -12,7 +12,7 @@ from constants import (
 
 from datetime import datetime
 from date_parsing import parse_date
-from logging_config import LoggerSetup
+from logging_config import LoggerSetup, mask_name, mask_ssan
 
 def format_date_for_display(date_value):
     """Format date for display in PDFs as DD-MMM-YYYY"""
@@ -118,8 +118,9 @@ def roster_processor(roster_df, session_id, cycle, year):
             continue
 
         # ONLY log members that will appear on the roster (passed all initial filters)
+        # Use PII masking for CUI compliance
         logger.info(f"\n{'='*60}")
-        logger.info(f"ROW {index}: Processing {member_name} (SSAN: {ssan})")
+        logger.info(f"ROW {index}: Processing {mask_name(member_name)} (SSAN: {mask_ssan(ssan)})")
         logger.info(f"  Current Grade: {grade}")
         logger.info(f"  Promotion Cycle: {cycle} {year}")
         logger.info(f"  Projected Grade: {projected_grade if projected_grade else 'None'}")

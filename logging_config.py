@@ -1,11 +1,68 @@
 import logging
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 
 # Create logs directory if it doesn't exist
 LOGS_DIR = Path(__file__).parent / 'logs'
 LOGS_DIR.mkdir(exist_ok=True)
+
+
+# =============================================================================
+# PII MASKING UTILITIES - CUI Compliance
+# =============================================================================
+
+def mask_name(name: str) -> str:
+    """
+    Mask a name for CUI compliance logging.
+    Example: "SMITH, JOHN MICHAEL" -> "S***H, J*** M*****"
+    """
+    if not name or not isinstance(name, str):
+        return "UNKNOWN"
+
+    parts = name.split(", ")
+    masked_parts = []
+
+    for part in parts:
+        words = part.split()
+        masked_words = []
+        for word in words:
+            if len(word) <= 2:
+                masked_words.append(word[0] + "*" if len(word) > 1 else word)
+            else:
+                masked_words.append(word[0] + "*" * (len(word) - 2) + word[-1])
+        masked_parts.append(" ".join(masked_words))
+
+    return ", ".join(masked_parts)
+
+
+def mask_ssan(ssan: str) -> str:
+    """
+    Mask SSAN/SSN for CUI compliance logging.
+    Example: "123-45-6789" -> "XXX-XX-6789"
+    """
+    if not ssan or ssan == "N/A" or not isinstance(ssan, str):
+        return "N/A"
+
+    # Only show last 4 digits
+    clean_ssan = re.sub(r'[^0-9]', '', str(ssan))
+    if len(clean_ssan) >= 4:
+        return f"XXX-XX-{clean_ssan[-4:]}"
+    return "XXX-XX-XXXX"
+
+
+def mask_pii_in_message(message: str) -> str:
+    """
+    Scan a log message and mask any potential PII patterns.
+    """
+    # Mask SSN patterns (XXX-XX-XXXX)
+    message = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', 'XXX-XX-XXXX', message)
+
+    # Mask 9-digit numbers that might be SSNs
+    message = re.sub(r'\b\d{9}\b', 'XXXXXXXXX', message)
+
+    return message
 
 # Log file paths for general logging
 UPLOAD_LOG_FILE = LOGS_DIR / 'uploads.log'
@@ -174,8 +231,10 @@ def log_session_end(logger, session_id: str, event_type: str, status: str = "SUC
 
 
 def log_member_processing(logger, member_name: str, ssan: str, step: str, details: str = None):
-    """Log individual member processing steps"""
-    msg = f"Member: {member_name} (SSAN: {ssan}) | Step: {step}"
+    """Log individual member processing steps with PII masking"""
+    masked_name = mask_name(member_name)
+    masked_ssan = mask_ssan(ssan)
+    msg = f"Member: {masked_name} (SSAN: {masked_ssan}) | Step: {step}"
     if details:
         msg += f" | {details}"
     logger.info(msg)
@@ -183,12 +242,15 @@ def log_member_processing(logger, member_name: str, ssan: str, step: str, detail
 
 def log_board_filter_decision(logger, member_name: str, ssan: str, eligible: bool,
                                reason: str = None, is_btz: bool = False):
-    """Log board filter eligibility decision"""
+    """Log board filter eligibility decision with PII masking"""
+    masked_name = mask_name(member_name)
+    masked_ssan = mask_ssan(ssan)
+
     status = "ELIGIBLE" if eligible else "INELIGIBLE"
     if is_btz:
         status = "ELIGIBLE (BTZ)"
 
-    msg = f"DECISION: {member_name} (SSAN: {ssan}) | {status}"
+    msg = f"DECISION: {masked_name} (SSAN: {masked_ssan}) | {status}"
     if reason:
         msg += f" | Reason: {reason}"
 
