@@ -46,3 +46,4 @@ dist/
 # Misc
 *.bak
 *.swp
+.env
