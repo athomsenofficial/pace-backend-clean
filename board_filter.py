@@ -100,7 +100,6 @@ def board_filter(
     three_afsc: Optional[str],
     four_afsc: Optional[str],
     member_name: str = "Unknown",
-    ssan: str = "N/A",
     logger: Optional[Logger] = None
 ) -> Union[bool, Tuple[bool, str], Tuple[str, str], None]:
     """
@@ -119,7 +118,6 @@ def board_filter(
         three_afsc: Third AFSC (can be None/NaN)
         four_afsc: Fourth AFSC (can be None/NaN)
         member_name: Member's name (for logging)
-        ssan: Member's SSAN (for logging)
         logger: Logger instance (optional, if None no logging)
 
     Returns:
@@ -144,7 +142,7 @@ def board_filter(
                 logger.error(msg, exc_info=exc_info)
 
         log_info(f"{'='*60}")
-        log_info(f"PROCESSING: {member_name} (SSAN: {ssan})")
+        log_info(f"PROCESSING: {member_name}")
         log_info(f"Grade: {grade} | Year: {year}")
         log_info(f"Input Data - DOR: {date_of_rank}, TAFMSD: {tafmsd}, UIF: {uif_code}")
 

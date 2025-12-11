@@ -37,21 +37,6 @@ def mask_name(name: str) -> str:
     return ", ".join(masked_parts)
 
 
-def mask_ssan(ssan: str) -> str:
-    """
-    Mask SSAN/SSN for CUI compliance logging.
-    Example: "123-45-6789" -> "XXX-XX-6789"
-    """
-    if not ssan or ssan == "N/A" or not isinstance(ssan, str):
-        return "N/A"
-
-    # Only show last 4 digits
-    clean_ssan = re.sub(r'[^0-9]', '', str(ssan))
-    if len(clean_ssan) >= 4:
-        return f"XXX-XX-{clean_ssan[-4:]}"
-    return "XXX-XX-XXXX"
-
-
 def mask_pii_in_message(message: str) -> str:
     """
     Scan a log message and mask any potential PII patterns.
@@ -230,27 +215,25 @@ def log_session_end(logger, session_id: str, event_type: str, status: str = "SUC
     logger.info("")  # Add blank line for readability
 
 
-def log_member_processing(logger, member_name: str, ssan: str, step: str, details: str = None):
+def log_member_processing(logger, member_name: str, step: str, details: str = None):
     """Log individual member processing steps with PII masking"""
     masked_name = mask_name(member_name)
-    masked_ssan = mask_ssan(ssan)
-    msg = f"Member: {masked_name} (SSAN: {masked_ssan}) | Step: {step}"
+    msg = f"Member: {masked_name} | Step: {step}"
     if details:
         msg += f" | {details}"
     logger.info(msg)
 
 
-def log_board_filter_decision(logger, member_name: str, ssan: str, eligible: bool,
+def log_board_filter_decision(logger, member_name: str, eligible: bool,
                                reason: str = None, is_btz: bool = False):
     """Log board filter eligibility decision with PII masking"""
     masked_name = mask_name(member_name)
-    masked_ssan = mask_ssan(ssan)
 
     status = "ELIGIBLE" if eligible else "INELIGIBLE"
     if is_btz:
         status = "ELIGIBLE (BTZ)"
 
-    msg = f"DECISION: {masked_name} (SSAN: {masked_ssan}) | {status}"
+    msg = f"DECISION: {masked_name} | {status}"
     if reason:
         msg += f" | Reason: {reason}"
 

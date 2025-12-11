@@ -12,7 +12,7 @@ from constants import (
 
 from datetime import datetime
 from date_parsing import parse_date
-from logging_config import LoggerSetup, mask_name, mask_ssan
+from logging_config import LoggerSetup, mask_name
 
 def format_date_for_display(date_value):
     """Format date for display in PDFs as DD-MMM-YYYY"""
@@ -80,7 +80,6 @@ def roster_processor(roster_df, session_id, cycle, year):
 
     for index, row in filtered_roster_df.iterrows():
         member_name = row.get('FULL_NAME', 'Unknown')
-        ssan = row.get('SSAN', 'N/A')
         grade = row.get('GRADE', 'Unknown')
 
         # Check for officer ranks - skip silently
@@ -120,7 +119,7 @@ def roster_processor(roster_df, session_id, cycle, year):
         # ONLY log members that will appear on the roster (passed all initial filters)
         # Use PII masking for CUI compliance
         logger.info(f"\n{'='*60}")
-        logger.info(f"ROW {index}: Processing {mask_name(member_name)} (SSAN: {mask_ssan(ssan)})")
+        logger.info(f"ROW {index}: Processing {mask_name(member_name)}")
         logger.info(f"  Current Grade: {grade}")
         logger.info(f"  Promotion Cycle: {cycle} {year}")
         logger.info(f"  Projected Grade: {projected_grade if projected_grade else 'None'}")
@@ -160,11 +159,10 @@ def roster_processor(roster_df, session_id, cycle, year):
         logger.info(f"  ✓ Ready for board filter - calling board_filter() for detailed eligibility check")
 
         # Board filter check - pass member info and logger for logging
-        # Note: member_name and ssan already defined above
         member_status = board_filter(row['GRADE'], year, row['DOR'], row['UIF_CODE'],
                                      row['UIF_DISPOSITION_DATE'], row['TAFMSD'], row['REENL_ELIG_STATUS'],
                                      row['PAFSC'], row['2AFSC'], row['3AFSC'], row['4AFSC'],
-                                     member_name=member_name, ssan=ssan, logger=logger)
+                                     member_name=member_name, logger=logger)
 
         if member_status is None:
             logger.info(f"  Decision: Not eligible (returned None from board_filter)")
