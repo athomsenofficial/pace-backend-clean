@@ -280,7 +280,7 @@ TIG = {
     'AB': '01-FEB',    # Chart shows 1 FEB for E1-E2
     'AMN': '01-FEB',   # Chart shows 1 FEB for E2-E3
     'A1C': '01-FEB',   # Chart shows 1 FEB for E3-E4
-    'SRA': '01-FEB',   # Chart shows 1 FEB for E4-E5
+    'SRA': '01-SEP',   # Promotion release 1 SEP for E4-E5
     'SSG': '01-AUG',   # Chart shows 1 AUG for E5-E6
     'TSG': '01-JUL',   # Chart shows 1 JUL for E6-E7
     'MSG': '01-JUL',   # Chart shows 1 JUL for E7-E8

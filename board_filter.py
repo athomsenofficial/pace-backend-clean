@@ -255,6 +255,25 @@ def board_filter(
         else:
             log_info(f"Step 4: Skipping 3-year TIS check (not applicable for {grade})")
 
+        # Step 4.5: SRA Feb-March promotion window exclusion
+        if grade == 'SRA':
+            log_info(f"Step 4.5: SRA Feb-March Promotion Window Check")
+
+            # Check if DOR is between Feb 2 and March 31 of any year
+            dor_month = date_of_rank.month
+            dor_day = date_of_rank.day
+
+            # Feb 2 - Feb 29 (month=2, day>=2) OR Mar 1 - Mar 31 (month=3)
+            if (dor_month == 2 and dor_day >= 2) or (dor_month == 3):
+                reason = 'SRA 2 Feb - 31 Mar or 3yr TIS'
+                log_warning(f"  FAILED: Promoted to SRA during ineligible window (Feb 2 - Mar 31)")
+                log_info(f"{'='*60}\n")
+                return False, reason
+
+            log_info(f"  PASSED: DOR not in Feb 2 - Mar 31 exclusion window")
+        else:
+            log_info(f"Step 4.5: Skipping SRA Feb-March check (not applicable for {grade})")
+
         # Step 5: TIG check
         log_info(f"Step 5: Time in Grade (TIG) Check")
         if date_of_rank is None or date_of_rank > tig_eligibility_month:
