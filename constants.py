@@ -19,6 +19,10 @@ cors_origins = [
     "https://pace-af-tool.com",
     "https://www.api.pace-af-tool.com",
     "https://www.pace-af-tool.com",
+    "http://pacetool.app",
+    "https://pacetool.app",
+    "http://www.pacetool.app",
+    "https://www.pacetool.app",
     # SECURITY FIX: Removed wildcard "*" - CORS now limited to specific origins only
 ]
 
