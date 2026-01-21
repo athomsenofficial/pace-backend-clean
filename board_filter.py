@@ -214,6 +214,17 @@ def board_filter(
         # Step 3: A1C specific checks
         if grade == 'A1C':
             log_info(f"Step 3: A1C Eligibility Check")
+
+            # Check 3-year TIS for A1C first
+            log_info(f"  Checking 3-Year TIS for A1C")
+            if three_year_tafmsd_check(scod_as_datetime, tafmsd):
+                reason = 'SRA 2 Feb - 31 Mar or 3yr TIS'
+                log_warning(f"  FAILED: {reason}")
+                log_info(f"{'='*60}\n")
+                return False, reason
+            log_info(f"  PASSED: 3-year TIS check for A1C")
+
+            # Check standard A1C eligibility
             eligibility_status = check_a1c_eligbility(date_of_rank, year)
             log_info(f"  A1C eligibility status: {eligibility_status}")
             if eligibility_status is None:
@@ -232,8 +243,8 @@ def board_filter(
         else:
             log_info(f"Step 3: Skipping A1C check (not applicable for {grade})")
 
-        # Step 4: 3-year TIS check for junior enlisted
-        if grade in ('A1C', 'AMN', 'AB'):
+        # Step 4: 3-year TIS check for AMN and AB only (A1C checked in Step 3)
+        if grade in ('AMN', 'AB'):
             log_info(f"Step 4: 3-Year TIS Check for {grade}")
             if three_year_tafmsd_check(scod_as_datetime, tafmsd):
                 reason = 'SRA 2 Feb - 31 Mar or 3yr TIS'
