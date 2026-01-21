@@ -244,14 +244,19 @@ def generate_small_unit_final_mel_pdf(small_unit_data, senior_rater, cycle, melY
         srid_list = small_unit_data.values.tolist() if hasattr(small_unit_data, 'values') else small_unit_data
         must_promote, promote_now = get_promotion_eligibility(len(srid_list), cycle)
 
-        # Format commander name for FD Name and FDID
-        commander_last = senior_rater.get('commander_last_name', '')
-        commander_first = senior_rater.get('commander_first_name', '')
-        commander_middle = senior_rater.get('commander_middle_name', '')
-        commander_name = f"{commander_last}, {commander_first}"
-        if commander_middle:
-            commander_name += f" {commander_middle}"
-        commander_name = commander_name.strip().strip(',')
+        # Format commander name for FD Name and FDID - check both commander_* and senior_rater_* fields
+        commander_last = senior_rater.get('commander_last_name') or senior_rater.get('senior_rater_last_name', '')
+        commander_first = senior_rater.get('commander_first_name') or senior_rater.get('senior_rater_first_name', '')
+        commander_middle = senior_rater.get('commander_middle_name') or senior_rater.get('senior_rater_middle_name', '')
+
+        # If we have first/last names, use them; otherwise fall back to senior_rater_name
+        if commander_last or commander_first:
+            commander_name = f"{commander_last}, {commander_first}"
+            if commander_middle:
+                commander_name += f" {commander_middle}"
+            commander_name = commander_name.strip().strip(',')
+        else:
+            commander_name = senior_rater.get('senior_rater_name', 'N/A')
 
         doc = FinalMELDocument(
             output_filename, cycle=cycle, melYear=melYear,
@@ -358,19 +363,25 @@ def generate_final_roster_pdf(session_id, output_filename="final_military_roster
         is_small_unit = eligible_candidates <= small_unit_threshold
         must_promote, promote_now = get_promotion_eligibility(eligible_candidates, cycle)
 
-        # Format commander name for FD Name
-        commander_last = pascode_map[pascode].get('commander_last_name', '')
-        commander_first = pascode_map[pascode].get('commander_first_name', '')
-        commander_middle = pascode_map[pascode].get('commander_middle_name', '')
-        commander_name = f"{commander_last}, {commander_first}"
-        if commander_middle:
-            commander_name += f" {commander_middle}"
-        commander_name = commander_name.strip().strip(',')
+        # Format commander name for FD Name - check both commander_* and senior_rater_* fields
+        commander_last = pascode_map[pascode].get('commander_last_name') or pascode_map[pascode].get('senior_rater_last_name', '')
+        commander_first = pascode_map[pascode].get('commander_first_name') or pascode_map[pascode].get('senior_rater_first_name', '')
+        commander_middle = pascode_map[pascode].get('commander_middle_name') or pascode_map[pascode].get('senior_rater_middle_name', '')
+
+        # If we have first/last names, use them; otherwise fall back to senior_rater_name
+        if commander_last or commander_first:
+            commander_name = f"{commander_last}, {commander_first}"
+            if commander_middle:
+                commander_name += f" {commander_middle}"
+            commander_name = commander_name.strip().strip(',')
+        else:
+            commander_name = pascode_map[pascode].get('senior_rater_name', 'N/A')
 
         # For large units, use commander info for signature block
         pas_info = {
-            'srid': pascode_map[pascode]['srid'], 'fd name': commander_name if commander_name else 'N/A',
-            'rank': pascode_map[pascode].get('commander_rank', 'N/A'), 'title': pascode_map[pascode].get('commander_title', 'N/A'),
+            'srid': pascode_map[pascode]['srid'], 'fd name': commander_name,
+            'rank': pascode_map[pascode].get('commander_rank') or pascode_map[pascode].get('senior_rater_rank', 'N/A'),
+            'title': pascode_map[pascode].get('commander_title') or pascode_map[pascode].get('senior_rater_title', 'N/A'),
             'fdid': f'{pascode_map[pascode]["srid"]}{pascode[-4:]}', 'srid mpf': pascode[:2],
             'mp': must_promote, 'pn': promote_now, 'is_small_unit': is_small_unit
         }
